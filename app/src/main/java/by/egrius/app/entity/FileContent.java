@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 import java.math.BigInteger;
 import java.util.UUID;
@@ -14,15 +15,15 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(exclude = "uploadedFile")
 public class FileContent {
     @Id
     private UUID id;
 
-    // Продумать привязку по айдишнику
     @OneToOne
     @MapsId
     @JoinColumn(name = "fileId")
-    UploadedFile uploadedFile;
+    private UploadedFile uploadedFile;
 
     String rawText;
 

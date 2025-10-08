@@ -5,30 +5,35 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Entity
 @Table(name="FileAnalysis")
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(exclude = "uploadedFile")
 public class FileAnalysis {
     @Id
+    private UUID id;
+
     @OneToOne
-    @JoinColumn(name = "fileId", referencedColumnName = "id")
-    UploadedFile uploadedFile;
+    @MapsId
+    @JoinColumn(name = "fileId")
+    private UploadedFile uploadedFile;
 
-    Map<String, Long> startsWithMap;
+    private Map<String, Long> startsWithMap;
 
-    Map<Character, Long> punctuationMap;
+    private Map<Character, Long> punctuationMap;
 
-    List<String> topWords;
+    private List<String> topWords;
 
-    Map<String, Long> wordLengthMap;
+    private Map<String, Long> wordLengthMap;
 
-    Boolean stopWordsExcluded;
-
+    private Boolean stopWordsExcluded;
 
 }

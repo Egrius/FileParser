@@ -30,6 +30,6 @@ public class User {
     @JsonFormat(pattern = "yyyy-MM-dd")
     LocalDate createdAt;
 
-    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     List<UploadedFile> files;
 }

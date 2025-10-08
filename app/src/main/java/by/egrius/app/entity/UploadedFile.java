@@ -34,10 +34,13 @@ public class UploadedFile {
     @Enumerated(value = EnumType.STRING)
     ContentType contentType;
 
-    @OneToOne(mappedBy = "uploadedFile", fetch = FetchType.EAGER)
+    @OneToOne(mappedBy = "uploadedFile", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     FileContent fileContent;
 
-    //Переделать
-    @OneToOne(mappedBy = "fileId")
+    @OneToOne(mappedBy = "uploadedFile", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     FileAnalysis fileAnalysis;
+
+    @OneToOne(mappedBy = "regexMatch", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    RegexMatch regexMatch;
+
 }
