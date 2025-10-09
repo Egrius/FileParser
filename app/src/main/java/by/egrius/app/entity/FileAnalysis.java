@@ -26,14 +26,30 @@ public class FileAnalysis {
     @JoinColumn(name = "fileId")
     private UploadedFile uploadedFile;
 
+    @ElementCollection
+    @CollectionTable(name = "starts_with_map", joinColumns = @JoinColumn(name = "fileId"))
+    @MapKeyColumn(name = "prefix")
+    @Column(name = "count")
     private Map<String, Long> startsWithMap;
 
+    @ElementCollection
+    @CollectionTable(name = "punctuation_stats", joinColumns = @JoinColumn(name="fileId"))
+    @MapKeyColumn(name = "character")
+    @Column(name = "count")
     private Map<Character, Long> punctuationMap;
 
+    @ElementCollection
+    @CollectionTable(name = "top_words", joinColumns = @JoinColumn(name = "fileId"))
+    @Column(name = "word")
     private List<String> topWords;
 
+    @ElementCollection
+    @CollectionTable(name = "words_length", joinColumns = @JoinColumn(name="fileId"))
+    @MapKeyColumn(name = "topWord")
+    @Column(name = "count")
     private Map<String, Long> wordLengthMap;
 
+    @Column(nullable = false)
     private Boolean stopWordsExcluded;
 
 }

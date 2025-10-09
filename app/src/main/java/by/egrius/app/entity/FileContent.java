@@ -25,12 +25,12 @@ public class FileContent {
     @JoinColumn(name = "fileId")
     private UploadedFile uploadedFile;
 
-    String rawText;
+    private String rawText;
 
-    Long lineCount;
+    private Long lineCount;
 
-    Long wordCount;
+    private Long wordCount;
 
     @Enumerated(value = EnumType.STRING)
-    Language language;
+    private Language language;
 }

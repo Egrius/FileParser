@@ -3,9 +3,7 @@ package by.egrius.app.entity;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -14,22 +12,23 @@ import java.util.UUID;
 @Entity
 @Table(name="Users")
 @Builder
+@Getter
 @NoArgsConstructor
 @AllArgsConstructor
 public class User {
     @Id
-    UUID userId;
+    private UUID userId;
 
     @Column(unique = true, nullable = false)
-    String username;
+    private String username;
 
     @Email
     @Column(nullable = false, unique = true)
-    String email;
+    private String email;
 
     @JsonFormat(pattern = "yyyy-MM-dd")
-    LocalDate createdAt;
+    private LocalDate createdAt;
 
     @OneToMany(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
-    List<UploadedFile> files;
+    private List<UploadedFile> files;
 }

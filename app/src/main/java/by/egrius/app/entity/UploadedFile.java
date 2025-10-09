@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 import java.sql.Timestamp;
 import java.util.UUID;
@@ -12,35 +13,39 @@ import java.util.UUID;
 @Entity
 @Table(name="UploadedFile")
 @Builder
+@ToString(exclude = {"user", "fileContent", "fileAnalysis", "regexMatch", "fileEventLog"})
 @NoArgsConstructor
 @AllArgsConstructor
 public class UploadedFile {
 
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "userId", nullable = false)
-    User user;
+    private User user;
 
     @Id
     @Column(name="fileId")
-    UUID id;
+    private UUID id;
 
     @Column(nullable = false)
-    String filename;
+    private String filename;
 
     @Column(nullable = false)
-    Timestamp uploadTime;
+    private Timestamp uploadTime;
 
     @Column(nullable = false)
     @Enumerated(value = EnumType.STRING)
-    ContentType contentType;
+    private ContentType contentType;
 
     @OneToOne(mappedBy = "uploadedFile", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    FileContent fileContent;
+    private FileContent fileContent;
 
     @OneToOne(mappedBy = "uploadedFile", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    FileAnalysis fileAnalysis;
+    private FileAnalysis fileAnalysis;
 
-    @OneToOne(mappedBy = "regexMatch", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    RegexMatch regexMatch;
+    @OneToOne(mappedBy = "uploadedFile", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private RegexMatch regexMatch;
+
+    @OneToOne(mappedBy = "uploadedFile", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private FileEventLog fileEventLog;
 
 }

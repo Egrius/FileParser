@@ -1,5 +1,6 @@
 package by.egrius.app.entity;
 
+import by.egrius.app.entity.enums.PatternType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
@@ -13,16 +14,17 @@ import java.util.UUID;
 @AllArgsConstructor
 public class RegexMatch {
     @Id
-    UUID id;
+    private UUID id;
 
     @OneToOne
     @MapsId
     @JoinColumn(name = "fileId")
-    UploadedFile uploadedFile;
+    private UploadedFile uploadedFile;
 
-    PatternType patternType;
+    @Enumerated(value = EnumType.STRING)
+    private PatternType patternType;
 
-    List<String> matches;
+    private List<String> matches;
 
-    Long matchCount;
+    private Long matchCount;
 }
