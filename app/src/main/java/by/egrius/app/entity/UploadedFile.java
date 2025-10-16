@@ -2,10 +2,7 @@ package by.egrius.app.entity;
 
 import by.egrius.app.entity.enums.ContentType;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
+import lombok.*;
 
 import java.sql.Timestamp;
 import java.util.UUID;
@@ -13,6 +10,8 @@ import java.util.UUID;
 @Entity
 @Table(name="UploadedFile")
 @Builder
+@Getter
+@Setter
 @ToString(exclude = {"user", "fileContent", "fileAnalysis", "regexMatch", "fileEventLog"})
 @NoArgsConstructor
 @AllArgsConstructor

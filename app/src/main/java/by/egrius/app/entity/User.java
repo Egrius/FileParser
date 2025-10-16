@@ -13,6 +13,7 @@ import java.util.UUID;
 @Table(name="Users")
 @Builder
 @Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class User {
@@ -25,6 +26,9 @@ public class User {
     @Email
     @Column(nullable = false, unique = true)
     private String email;
+
+    @Column(nullable = false)
+    private String password;
 
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate createdAt;
