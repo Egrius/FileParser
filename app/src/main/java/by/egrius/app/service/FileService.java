@@ -14,11 +14,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AccessDeniedException;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -29,13 +30,10 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class FileService {
 
-    private final UploadedFileRepository uploadedFileRepository;
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final UploadedFileRepository uploadedFileRepository;
     private final UploadedFileReadMapper uploadedFileReadMapper;
-
-    public Page<UploadedFileReadDto> getAllFilesByUserId(UUID id, Pageable pageable) {
-        return uploadedFileRepository.findAllByUser_UserId(id, pageable);
-    }
 
     @SneakyThrows
     @Transactional
@@ -73,5 +71,36 @@ public class FileService {
 
         uploadedFileRepository.save(uploadedFile);
         return uploadedFileReadMapper.map(uploadedFile);
+    }
+
+    public UploadedFileReadDto showUploadedFileById(UUID userId, UUID fileId) {
+        UploadedFile uploadedFile = uploadedFileRepository.findByIdAndUser_UserId(fileId, userId)
+                .orElseThrow(() -> new EntityNotFoundException("Файл не найден или не принадлежит пользователю"));
+
+        return uploadedFileReadMapper.map(uploadedFile);
+    }
+
+    public Page<UploadedFileReadDto> showAllUploadedFilesByUserId(UUID userId, Pageable pageable) {
+        Page<UploadedFile> files = uploadedFileRepository.findAllByUser_UserId(userId, pageable);
+        return files.map(uploadedFileReadMapper::map);
+    }
+
+    @Transactional
+    public void removeFile(UUID userId, String rawPassword, UUID fileId) throws AccessDeniedException {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("Не удалось найти пользователя при удалении файла"));
+
+        UploadedFile uploadedFile = uploadedFileRepository.findById(fileId)
+                .orElseThrow(() -> new EntityNotFoundException("Не удалось найти файл для удаления"));
+
+        if (!uploadedFile.getUser().getUserId().equals(userId)) {
+            throw new AccessDeniedException("Файл не принадлежит пользователю");
+        }
+
+        if (!passwordEncoder.matches(rawPassword, user.getPassword())) {
+            throw new AccessDeniedException("Неверный пароль");
+        }
+
+        uploadedFileRepository.delete(uploadedFile);
     }
 }

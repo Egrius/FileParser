@@ -1,11 +1,12 @@
 package by.egrius.app.service;
 
 import by.egrius.app.dto.fileDTO.FileReadDto;
+import by.egrius.app.dto.fileDTO.UploadedFileReadDto;
 import by.egrius.app.dto.userDTO.UserCreateDto;
 import by.egrius.app.dto.userDTO.UserReadDto;
 import by.egrius.app.dto.userDTO.UserUpdateDto;
 import by.egrius.app.entity.User;
-import by.egrius.app.mapper.fileMapper.FileReadMapper;
+import by.egrius.app.mapper.fileMapper.UploadedFileReadMapper;
 import by.egrius.app.mapper.userMapper.UserCreateMapper;
 import by.egrius.app.mapper.userMapper.UserReadMapper;
 import by.egrius.app.mapper.userMapper.UserUpdateMapper;
@@ -34,7 +35,7 @@ public class UserService {
     private final UserReadMapper userReadMapper;
     private final  UserCreateMapper userCreateMapper;
     private final UserUpdateMapper userUpdateMapper;
-    private final FileReadMapper fileReadMapper;
+    private final UploadedFileReadMapper fileReadMapper;
 
     public Optional<UserReadDto> getUserByUsername(String username) {
         return userRepository.findByUsername(username).map(userReadMapper::map);
@@ -44,7 +45,7 @@ public class UserService {
         return userRepository.findById(id).map(userReadMapper::map);
     }
 
-    public List<FileReadDto> getUploadedUserFilesById(UUID id) {
+    public List<UploadedFileReadDto> getUploadedUserFilesById(UUID id) {
         return userRepository.findById(id)
                 .map(
                         user ->  user.getFiles()

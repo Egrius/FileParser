@@ -4,7 +4,7 @@ import by.egrius.app.dto.userDTO.UserCreateDto;
 import by.egrius.app.dto.userDTO.UserReadDto;
 import by.egrius.app.dto.userDTO.UserUpdateDto;
 import by.egrius.app.entity.User;
-import by.egrius.app.mapper.fileMapper.FileReadMapper;
+import by.egrius.app.mapper.fileMapper.UploadedFileReadMapper;
 import by.egrius.app.mapper.userMapper.UserCreateMapper;
 import by.egrius.app.mapper.userMapper.UserReadMapper;
 import by.egrius.app.mapper.userMapper.UserUpdateMapper;
@@ -44,7 +44,7 @@ class UserServiceUnitTest {
     private UserUpdateMapper userUpdateMapper;
 
     @Mock
-    private FileReadMapper fileReadMapper;
+    private UploadedFileReadMapper fileReadMapper;
 
     @InjectMocks
     private UserService userService;
