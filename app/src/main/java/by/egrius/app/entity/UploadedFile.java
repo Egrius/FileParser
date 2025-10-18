@@ -46,5 +46,4 @@ public class UploadedFile {
 
     @OneToOne(mappedBy = "uploadedFile", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private FileEventLog fileEventLog;
-
 }

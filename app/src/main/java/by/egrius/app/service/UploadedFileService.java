@@ -28,7 +28,7 @@ import java.util.UUID;
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
-public class FileService {
+public class UploadedFileService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -59,7 +59,6 @@ public class FileService {
                 .build();
 
         FileContent fileContent = FileContent.builder()
-                .id(uploadedFile.getId())
                 .uploadedFile(uploadedFile)
                 .rawText(rawText)
                 .lineCount(lineCount)
@@ -70,6 +69,7 @@ public class FileService {
         uploadedFile.setFileContent(fileContent);
 
         uploadedFileRepository.save(uploadedFile);
+
         return uploadedFileReadMapper.map(uploadedFile);
     }
 

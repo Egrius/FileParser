@@ -16,7 +16,7 @@ public class UploadedFileReadMapper implements BaseMapper<UploadedFile, Uploaded
     @Override
     public UploadedFileReadDto map(UploadedFile object) {
         return new UploadedFileReadDto(
-            userReadMapper.map(object.getUser()),
+            userReadMapper.map(object.getUser()), // <- N+1 проблема, решил через энтити граф
                 object.getId(),
                 object.getFilename(),
                 object.getUploadTime(),

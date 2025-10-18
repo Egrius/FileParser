@@ -15,7 +15,7 @@ public interface UploadedFileRepository extends JpaRepository<UploadedFile, UUID
     @EntityGraph(attributePaths = {"user"})
     Page<UploadedFile> findAllByUser_UserId(UUID userId, Pageable pageable);
 
-    @EntityGraph(attributePaths = {"user"})
+    @EntityGraph(attributePaths = {"fileContent", "fileAnalysis", "regexMatch", "fileEventLog"})
     Optional<UploadedFile> findByIdAndUser_UserId(UUID fileId, UUID userId);
 
 }

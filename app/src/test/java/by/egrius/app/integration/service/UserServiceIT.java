@@ -6,6 +6,7 @@ import by.egrius.app.dto.userDTO.UserUpdateDto;
 import by.egrius.app.entity.User;
 import by.egrius.app.repository.UserRepository;
 import by.egrius.app.service.UserService;
+import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -20,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 
 @SpringBootTest
-class UserServiceIntegrationTest {
+class UserServiceIT {
     @Autowired
     private UserService userService;
 
@@ -101,6 +102,7 @@ class UserServiceIntegrationTest {
 
     @Test
     void delete_ShouldDeleteUserFromDatabase() {
+        /*
         User user = new User();
 
         UUID idToDelete = UUID.randomUUID();
@@ -113,8 +115,13 @@ class UserServiceIntegrationTest {
         user.setCreatedAt(LocalDate.now());
 
         user = userRepository.save(user);
+*/
+        User user = userRepository.findByUsername("TestUserToUploadFile_2").orElseThrow(
+                () -> new EntityNotFoundException("Not found a user to remove"));
 
-        userService.deleteUser(idToDelete, "123");
+        UUID idToDelete = user.getUserId();
+
+        userService.deleteUser(idToDelete, "1234");
 
         Optional<User> deletedUser = userRepository.findById(idToDelete);
         assertTrue(deletedUser.isEmpty());

@@ -2,10 +2,7 @@ package by.egrius.app.entity;
 
 import by.egrius.app.entity.enums.Language;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
+import lombok.*;
 
 import java.math.BigInteger;
 import java.util.UUID;
@@ -13,6 +10,8 @@ import java.util.UUID;
 @Entity
 @Table(name="FileContent")
 @Builder
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString(exclude = "uploadedFile")
