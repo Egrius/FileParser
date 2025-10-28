@@ -6,9 +6,9 @@ import java.util.UUID;
 
 public record FileAnalysisReadDto (
          UUID id,
-         List<String> topWords,
-         Map<String, Long> startsWithMap,
+         Map<String, Long> topWords,
+         Map<Character, Long> startsWithMap,
          Map<Character, Long> punctuationMap,
-         Map<String, Long> wordLengthMap,
+         Map<String, Integer> wordLengthMap,
          Boolean stopWordsExcluded
 ) {}

@@ -3,9 +3,12 @@ package by.egrius.app.dto.fileDTO;
 import by.egrius.app.entity.enums.PatternType;
 
 import java.util.List;
+import java.util.Map;
 
 public record RegexMatchReadDto(
-        PatternType patternType,
-        List<String> matches,
+        List<String> emailMatches,
+        List<String> phoneMatches,
+        List<String> ipMatches,
+        List<String> dateMatches,
         Long matchCount
 ) {}

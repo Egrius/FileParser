@@ -1,30 +1,37 @@
-package by.egrius.app.entity;
+    package by.egrius.app.entity;
 
-import by.egrius.app.entity.enums.FileEventType;
-import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
+    import by.egrius.app.entity.enums.FileEventType;
+    import jakarta.persistence.*;
+    import lombok.AllArgsConstructor;
+    import lombok.Builder;
+    import lombok.NoArgsConstructor;
+    import lombok.ToString;
 
-import java.sql.Timestamp;
-import java.util.UUID;
+    import org.hibernate.annotations.GenericGenerator;
 
-@Entity
-@Table(name="FileEventLog")
-@ToString(exclude = "uploadedFile")
-@NoArgsConstructor
-@AllArgsConstructor
-public class FileEventLog {
-    @Id
-    private UUID id;
+    import java.sql.Timestamp;
+    import java.util.UUID;
 
-    @OneToOne
-    @MapsId
-    @JoinColumn(name = "fileId")
-    private UploadedFile uploadedFile;
+    @Entity
+    @Table(name="FileEventLog")
+    @Builder
+    @ToString(exclude = "uploadedFile")
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public class FileEventLog {
+        @Id
+        @GeneratedValue(generator = "UUID")
+        @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
+        @Column(name = "id", updatable = false, nullable = false)
+        // Добавить генератор
+        private UUID id;
 
-    @Enumerated(value = EnumType.STRING)
-    private FileEventType fileEventType;
+        @ManyToOne
+        @JoinColumn(name = "fileId")
+        private UploadedFile uploadedFile;
 
-    private Timestamp timestamp;
-}
+        @Enumerated(value = EnumType.STRING)
+        private FileEventType fileEventType;
+
+        private Timestamp timestamp;
+    }

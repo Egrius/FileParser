@@ -102,20 +102,7 @@ class UserServiceIT {
 
     @Test
     void delete_ShouldDeleteUserFromDatabase() {
-        /*
-        User user = new User();
 
-        UUID idToDelete = UUID.randomUUID();
-
-        user.setUserId(idToDelete);
-        user.setUsername("TestToDelete");
-        user.setFiles(Collections.emptyList());
-        user.setEmail("delete@gmail.com");
-        user.setPassword(passwordEncoder.encode("123"));
-        user.setCreatedAt(LocalDate.now());
-
-        user = userRepository.save(user);
-*/
         User user = userRepository.findByUsername("TestUserToUploadFile_2").orElseThrow(
                 () -> new EntityNotFoundException("Not found a user to remove"));
 

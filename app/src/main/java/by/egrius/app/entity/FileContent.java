@@ -24,6 +24,7 @@ public class FileContent {
     @JoinColumn(name = "fileId")
     private UploadedFile uploadedFile;
 
+    @Column(columnDefinition = "TEXT")
     private String rawText;
 
     private Long lineCount;
