@@ -22,7 +22,8 @@
         private User user;
 
         @Id
-        @Column(name="fileId")
+        @GeneratedValue
+        @Column(name = "fileId", updatable = false, nullable = false)
         private UUID id;
 
         @Column(nullable = false)

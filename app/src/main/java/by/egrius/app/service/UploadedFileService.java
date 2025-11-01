@@ -53,7 +53,7 @@ public class UploadedFileService {
                     .count();
 
             UploadedFile uploadedFile = UploadedFile.builder()
-                    .id(UUID.randomUUID()) //переделать на генератор
+
                     .user(user)
                     .filename(filename)
                     .uploadTime(Timestamp.valueOf(LocalDateTime.now()))
