@@ -5,6 +5,7 @@ import by.egrius.app.dto.userDTO.UserCreateDto;
 import by.egrius.app.dto.userDTO.UserReadDto;
 import by.egrius.app.dto.userDTO.UserUpdateDto;
 import by.egrius.app.service.UserService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,13 +24,13 @@ public class UserController {
     @Autowired
     private UserService userService;
 
-    @GetMapping("by-username/{username}")
+    @GetMapping("/by-username/{username}")
     public ResponseEntity<UserReadDto> getUserByUsername(@PathVariable("username") String username) {
         Optional<UserReadDto> user = userService.getUserByUsername(username);
         return ResponseEntity.of(user);
     }
 
-    @GetMapping("by-id/{id}")
+    @GetMapping("/by-id/{id}")
     public ResponseEntity<UserReadDto> getUserByUserId(@PathVariable("id") UUID id) {
         Optional<UserReadDto> user = userService.getUserById(id);
         return ResponseEntity.of(user);
@@ -42,35 +43,15 @@ public class UserController {
     }
 
     @PostMapping("/create-user")
-    public ResponseEntity<UserReadDto> createUser(@RequestBody UserCreateDto userCreateDto) {
-        if(userCreateDto.getUsername().isEmpty()) {
-            throw new SecurityException("Имя пользователя не должно быть пустым");
-        }
-        if(userCreateDto.getEmail().isEmpty()) {
-            throw new SecurityException("Почта пользователя не должно быть пустым");
-        }
-        if(userCreateDto.getRawPassword().length() < 4) {
-            throw new SecurityException("Пароль должен быть длиннее 4 символов");
-        }
+    public ResponseEntity<UserReadDto> createUser(@Valid @RequestBody UserCreateDto userCreateDto) {
 
         UserReadDto createdUserReadDto = userService.createUser(userCreateDto);
         return ResponseEntity.ofNullable(createdUserReadDto);
     }
 
-    @PostMapping("/update-user/{id}")
+    @PutMapping("/update-user/{id}")
     public ResponseEntity<UserReadDto> updateUser(@PathVariable UUID id,
-                                                  @RequestBody UserUpdateDto userUpdateDto) {
-        // Сделать валидацию дтошки без if-ов
-
-        if(userUpdateDto.getUsername().isEmpty()) {
-            throw new SecurityException("Имя пользователя не должно быть пустым");
-        }
-        if(userUpdateDto.getEmail().isEmpty()) {
-            throw new SecurityException("Почта пользователя не должно быть пустым");
-        }
-        if(userUpdateDto.getRawPassword().length() < 4) {
-            throw new SecurityException("Пароль должен быть длиннее 4 символов");
-        }
+                                                  @Valid @RequestBody UserUpdateDto userUpdateDto) {
 
         UserReadDto updatedUserReadDto = userService.updateUser(id, userUpdateDto);
         return ResponseEntity.ofNullable(updatedUserReadDto);
@@ -81,11 +62,7 @@ public class UserController {
     public Map<String, Boolean> deleteUser(@PathVariable UUID id,
                                            @RequestParam String rawPassword) {
 
-        if(id == null) throw new IllegalArgumentException("ID должен быть не пустым");
-        if(rawPassword.isEmpty()) throw new IllegalArgumentException("Пароль должен быть не пустым");
-
         userService.deleteUser(id, rawPassword);
-
         return Map.of("deleted", true);
     }
 }

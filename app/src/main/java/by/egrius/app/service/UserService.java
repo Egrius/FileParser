@@ -11,15 +11,15 @@ import by.egrius.app.mapper.userMapper.UserReadMapper;
 import by.egrius.app.mapper.userMapper.UserUpdateMapper;
 import by.egrius.app.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
+import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -34,6 +34,8 @@ public class UserService {
     private final  UserCreateMapper userCreateMapper;
     private final UserUpdateMapper userUpdateMapper;
     private final UploadedFileReadMapper fileReadMapper;
+
+    private final Validator validator;
 
     public Optional<UserReadDto> getUserByUsername(String username) {
         return userRepository.findByUsername(username).map(userReadMapper::map);
@@ -57,6 +59,12 @@ public class UserService {
     public UserReadDto createUser(UserCreateDto userCreateDto) {
         User user = userCreateMapper.map(userCreateDto);
         user.setPassword(passwordEncoder.encode(userCreateDto.getRawPassword()));
+
+        Set<ConstraintViolation<User>> violations = validator.validate(user);
+        if(!violations.isEmpty()) {
+            throw new ConstraintViolationException(violations);
+        }
+
         userRepository.save(user);
         return userReadMapper.map(user);
     }
@@ -64,7 +72,7 @@ public class UserService {
     @Transactional
     public UserReadDto updateUser(UUID id, UserUpdateDto userUpdateDto) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Пользователь для обновления не найден"));
 
         userUpdateMapper.map(userUpdateDto, user);
 

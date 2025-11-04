@@ -3,6 +3,8 @@ package by.egrius.app.entity;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import lombok.*;
 
 import java.time.LocalDate;
@@ -18,15 +20,20 @@ import java.util.UUID;
 @AllArgsConstructor
 public class User {
     @Id
+    @GeneratedValue
+    @Column(name = "userId", updatable = false, nullable = false)
     private UUID userId;
 
     @Column(unique = true, nullable = false)
+    @NotEmpty
     private String username;
 
     @Email
     @Column(nullable = false, unique = true)
     private String email;
 
+    @NotBlank
+    @NotEmpty
     @Column(nullable = false)
     private String password;
 

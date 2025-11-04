@@ -1,0 +1,201 @@
+package by.egrius.app.unit.controller;
+
+import by.egrius.app.controller.UserController;
+import by.egrius.app.dto.fileDTO.UploadedFileReadDto;
+import by.egrius.app.dto.userDTO.UserReadDto;
+import by.egrius.app.entity.enums.ContentType;
+import by.egrius.app.service.UserService;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+
+import java.sql.Timestamp;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.*;
+
+@WebMvcTest(UserController.class)
+@AutoConfigureMockMvc(addFilters = false)
+class UserControllerUnitTest {
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockitoBean
+    private UserService userService;
+
+    @Test
+    void createUser_shouldReturn400_whenInvalidDto() throws Exception {
+            String invalidJson = """
+                    {
+                        "username": "",
+                        "email": "not-an-email",
+                        "rawPassword": "123"
+                    }
+                    """;
+
+            mockMvc.perform(post("/user/create-user")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(invalidJson))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.violations").isArray())
+                    .andExpect(jsonPath("$.violations.length()").value(3)
+                    );
+    }
+
+    @Test
+    void createUser_shouldReturn200_whenValidDto() throws Exception {
+        String validJson = """
+                    {
+                        "username": "TestUser",
+                        "email": "test_user@gmail.com",
+                        "rawPassword": "1234"
+                    }
+                    """;
+
+        UserReadDto mockResponse = new UserReadDto(UUID.randomUUID(), "TestUser", "test_user@gmail.com", LocalDate.now());
+
+        when(userService.createUser(any())).thenReturn(mockResponse);
+
+        mockMvc.perform(post("/user/create-user")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validJson))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value("TestUser"))
+                .andExpect(jsonPath("$.email").value("test_user@gmail.com"));
+    }
+
+    @Test
+    void createUser_shouldReturn400_whenPassword_length_less_than_4() throws Exception {
+        String invalidJson = """
+                    {
+                        "username": "TestUser",
+                        "email": "test_user@gmail.com",
+                        "rawPassword": "123"
+                    }
+                    """;
+
+        mockMvc.perform(post("/user/create-user")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(invalidJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.violations").isArray())
+                .andExpect(jsonPath("$.violations.length()").value(1));
+    }
+
+    @Test
+    void getUserByUsername_shouldReturn200_whenNameIsCorrect() throws Exception {
+        UserReadDto mockDto = new UserReadDto(
+                UUID.randomUUID(),
+                "A",
+                "testgmail@gmail.com",
+                LocalDate.now()
+        );
+
+        String username = mockDto.username();
+
+        when(userService.getUserByUsername(username)).thenReturn(Optional.of(mockDto));
+
+        mockMvc.perform(get("/user/by-username/A"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value("A"))
+                .andExpect(jsonPath("$.email").value("testgmail@gmail.com"));
+    }
+
+    @Test
+    void getUserByUsername_shouldReturn404_whenNameNotFound() throws Exception {
+        UserReadDto mockDto = new UserReadDto(
+                UUID.randomUUID(),
+                "A",
+                "testgmail@gmail.com",
+                LocalDate.now()
+        );
+
+        when(userService.getUserByUsername("A")).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/user/by-username/A"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void getUserByUserId_shouldReturn200_whenIdFound() throws Exception {
+        UserReadDto mockDto = new UserReadDto(
+                UUID.randomUUID(),
+                "A",
+                "testgmail@gmail.com",
+                LocalDate.now()
+        );
+
+        UUID mockId = mockDto.userId();
+
+        when(userService.getUserById(mockId)).thenReturn(Optional.of(mockDto));
+
+        mockMvc.perform(get("/user/by-id/" + mockId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value(mockDto.username()))
+                .andExpect(jsonPath("$.userId").value(mockDto.userId().toString()))
+                .andExpect(jsonPath("$.email").value(mockDto.email()));
+    }
+
+    @Test
+    void getUserByUserId_shouldReturn404_whenIdNotFound() throws Exception {
+
+        UUID mockId = UUID.randomUUID();
+
+        when(userService.getUserById(mockId)).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/user/by-id/" + mockId))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void getUserFilesById_shouldReturn200_whenFoundUser() throws Exception {
+        UserReadDto mockDto = new UserReadDto(
+                UUID.randomUUID(),
+                "A",
+                "testgmail@gmail.com",
+                LocalDate.now()
+        );
+        UUID mockId = mockDto.userId();
+
+
+        List<UploadedFileReadDto> mockFiles = List.of(
+                new UploadedFileReadDto(mockDto, mockId, "file1.txt", Timestamp.valueOf(LocalDateTime.now()), ContentType.TXT),
+                new UploadedFileReadDto(mockDto, mockId, "file2.txt", Timestamp.valueOf(LocalDateTime.now()), ContentType.TXT)
+        );
+
+        when(userService.getUploadedUserFilesById(mockId)).thenReturn(mockFiles);
+
+        mockMvc.perform(get("/user/user-files/" + mockId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].user.username").value(mockDto.username()))
+                .andExpect(jsonPath("$[0].user.userId").value(mockId.toString()))
+                .andExpect(jsonPath("$[0].filename").value("file1.txt"))
+                .andExpect(jsonPath("$[1].user.username").value(mockDto.username()))
+                .andExpect(jsonPath("$[1].user.userId").value(mockId.toString()))
+                .andExpect(jsonPath("$[1].filename").value("file2.txt"));
+    }
+
+    @Test
+    void getUserFilesById_shouldReturn200_withEmptyBody_whenUserNotFound() throws Exception {
+        UUID mockId = UUID.randomUUID();
+
+        when(userService.getUploadedUserFilesById(mockId)).thenReturn(Collections.emptyList());
+
+        mockMvc.perform(get("/user/user-files/" + mockId))
+                .andExpect(status().isOk())
+                .andExpect(content().json("[]"));
+    }
+
+}

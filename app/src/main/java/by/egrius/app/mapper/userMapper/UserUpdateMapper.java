@@ -20,7 +20,12 @@ public class UserUpdateMapper implements BaseMapper<UserUpdateDto, User> {
     }
 
     private void copy(UserUpdateDto object, User user) {
-        user.setUsername(object.getUsername());
-        user.setEmail(object.getEmail());
+        if (object.getUsername() != null && !object.getUsername().isBlank()) {
+            user.setUsername(object.getUsername());
+        }
+
+        if (object.getEmail() != null && !object.getEmail().isBlank()) {
+            user.setEmail(object.getEmail());
+        }
     }
 }
