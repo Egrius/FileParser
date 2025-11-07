@@ -47,13 +47,17 @@ public class UploadedFileService {
         try {
             byte[] fileBytes = file.getBytes();
             String rawText = new String(fileBytes, StandardCharsets.UTF_8);
+
+            if (file.isEmpty() || fileBytes.length == 0 || rawText.trim().isEmpty()) {
+                throw new IllegalArgumentException("Файл пустой или не содержит текстового содержимого");
+            }
+
             long lineCount = rawText.lines().count();
             long wordCount = Arrays.stream(rawText.split("\\s+"))
                     .filter(word -> !word.isBlank())
                     .count();
 
             UploadedFile uploadedFile = UploadedFile.builder()
-
                     .user(user)
                     .filename(filename)
                     .uploadTime(Timestamp.valueOf(LocalDateTime.now()))
@@ -83,6 +87,15 @@ public class UploadedFileService {
     public UploadedFileReadDto showUploadedFileById(UUID userId, UUID fileId) {
         UploadedFile uploadedFile = uploadedFileRepository.findByIdAndUser_UserId(fileId, userId)
                 .orElseThrow(() -> new EntityNotFoundException("Файл не найден или не принадлежит пользователю"));
+
+        return uploadedFileReadMapper.map(uploadedFile);
+    }
+
+    // новый метод
+    public UploadedFileReadDto showUploadedFileByFilename(String filename, UUID userId) {
+
+        UploadedFile uploadedFile = uploadedFileRepository.findByFilenameAndUserId(filename, userId)
+                .orElseThrow(() -> new EntityNotFoundException("Файл с именем \" " + filename + " \" не найден"));
 
         return uploadedFileReadMapper.map(uploadedFile);
     }

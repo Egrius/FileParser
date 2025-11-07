@@ -27,7 +27,7 @@ public class UserCreateMapper implements BaseMapper<UserCreateDto, User> {
     }
 
     private void copy(UserCreateDto object, User user) {
-        user.setUserId(UUID.randomUUID());
+        //user.setUserId(UUID.randomUUID());
         user.setUsername(object.getUsername());
         user.setEmail(object.getEmail());
         user.setFiles(Collections.emptyList());

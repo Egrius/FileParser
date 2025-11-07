@@ -15,8 +15,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-//                          ДОБАВИТЬ ВАЛИДАЦИЮ ДТО
-
 @RestController
 @RequestMapping("/user")
 public class UserController {
@@ -65,4 +63,6 @@ public class UserController {
         userService.deleteUser(id, rawPassword);
         return Map.of("deleted", true);
     }
+
+
 }

@@ -10,11 +10,18 @@ import by.egrius.app.mapper.userMapper.UserCreateMapper;
 import by.egrius.app.mapper.userMapper.UserReadMapper;
 import by.egrius.app.mapper.userMapper.UserUpdateMapper;
 import by.egrius.app.repository.UserRepository;
+import by.egrius.app.security.UserPrincipal;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,7 +32,7 @@ import java.util.stream.Collectors;
 @Service
 @Transactional(readOnly=true)
 @RequiredArgsConstructor
-public class UserService {
+public class UserService implements UserDetailsService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -36,6 +43,21 @@ public class UserService {
     private final UploadedFileReadMapper fileReadMapper;
 
     private final Validator validator;
+
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        System.out.println("ВЫЗВАН ЗАГРУЗЧИК ИЗ СЕКЮРИТИ");
+        User user = userRepository.findByUsername(username).orElseThrow(() -> new UsernameNotFoundException("Пользователь не найден: " + username));
+        return new UserPrincipal(user);
+    }
+
+    public User getCurrentUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof UserPrincipal principal) {
+            return principal.getUser();
+        }
+        throw new SecurityException("Не удалось получить текущего пользователя");
+    }
 
     public Optional<UserReadDto> getUserByUsername(String username) {
         return userRepository.findByUsername(username).map(userReadMapper::map);
@@ -66,6 +88,7 @@ public class UserService {
         }
 
         userRepository.save(user);
+
         return userReadMapper.map(user);
     }
 

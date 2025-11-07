@@ -26,7 +26,7 @@
         @Column(name = "fileId", updatable = false, nullable = false)
         private UUID id;
 
-        @Column(nullable = false)
+        @Column(nullable = false, unique = true)
         private String filename;
 
         @Column(nullable = false)
