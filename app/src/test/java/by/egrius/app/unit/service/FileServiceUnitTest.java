@@ -6,6 +6,7 @@ import by.egrius.app.entity.UploadedFile;
 import by.egrius.app.entity.User;
 import by.egrius.app.entity.enums.ContentType;
 import by.egrius.app.mapper.fileMapper.UploadedFileReadMapper;
+import by.egrius.app.publisher.FileEventPublisher;
 import by.egrius.app.repository.UploadedFileRepository;
 import by.egrius.app.repository.UserRepository;
 import by.egrius.app.service.UploadedFileService;
@@ -50,6 +51,9 @@ class FileServiceUnitTest {
     @Mock
     private  UploadedFileReadMapper uploadedFileReadMapper;
 
+    @Mock
+    private FileEventPublisher fileEventPublisher;
+
     @InjectMocks
     private UploadedFileService fileService;
 
@@ -79,7 +83,6 @@ class FileServiceUnitTest {
                 .build();
 
         UploadedFileReadDto expectedDto = new UploadedFileReadDto(
-                new UserReadDto(user.getUserId(), user.getUsername(), user.getEmail(), user.getCreatedAt()),
                 uploadedFile.getId(),
                 uploadedFile.getFilename(),
                 uploadedFile.getUploadTime(),
@@ -87,11 +90,11 @@ class FileServiceUnitTest {
         );
 
 
-        when(userRepository.findById(any(UUID.class))).thenReturn(Optional.of(user));
+        //when(userRepository.findById(any(UUID.class))).thenReturn(Optional.of(user));
         when(uploadedFileReadMapper.map(any(UploadedFile.class))).thenReturn(expectedDto);
         when(uploadedFileRepository.save(any(UploadedFile.class))).thenReturn(uploadedFile);
 
-        UploadedFileReadDto result = fileService.uploadFile(mockFile, user.getUserId());
+        UploadedFileReadDto result = fileService.uploadFile(mockFile, user);
 
         assertEquals(expectedDto.id(), result.id());
         assertEquals(expectedDto.filename(), result.filename());
@@ -122,12 +125,7 @@ class FileServiceUnitTest {
                 .build();
 
         UploadedFileReadDto expectedFileDto = new UploadedFileReadDto(
-                new UserReadDto(
-                        expectedUser.getUserId(),
-                        expectedUser.getUsername(),
-                        expectedUser.getEmail(),
-                        expectedUser.getCreatedAt()
-                ),
+
                 uploadedFile.getId(),
                 uploadedFile.getFilename(),
                 uploadedFile.getUploadTime(),
@@ -141,7 +139,6 @@ class FileServiceUnitTest {
 
         assertNotNull(actualResult);
         assertEquals(actualResult.id(), expectedFileDto.id());
-        assertEquals(actualResult.user().userId(), expectedFileDto.user().userId());
     }
 
     @Test
@@ -158,13 +155,12 @@ class FileServiceUnitTest {
                 .build();
 
         UploadedFileReadDto dto = new UploadedFileReadDto(
-                new UserReadDto(user.getUserId(), user.getUsername(), user.getEmail(), user.getCreatedAt()),
                 file.getId(), file.getFilename(), file.getUploadTime(), file.getContentType()
         );
 
         Page<UploadedFile> page = new PageImpl<>(List.of(file), pageable, 1);
 
-        when(uploadedFileRepository.findAllByUser_UserId(userId, pageable)).thenReturn(page);
+        when(uploadedFileRepository.findAllFilesByUserId(userId, pageable)).thenReturn(page);
         when(uploadedFileReadMapper.map(file)).thenReturn(dto);
 
         Page<UploadedFileReadDto> result = fileService.showAllUploadedFilesByUserId(userId, pageable);

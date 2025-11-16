@@ -7,7 +7,6 @@ import java.sql.Timestamp;
 import java.util.UUID;
 
 public record UploadedFileReadDto (
-        UserReadDto user,
         UUID id,
         String filename,
         Timestamp uploadTime,

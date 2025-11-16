@@ -23,6 +23,19 @@ public class FileEventLogService {
     private final UploadedFileRepository uploadedFileRepository;
 
     private void createEventLog(FileEventType eventType, UUID fileId) {
+        if (eventType == FileEventType.DELETED) {
+
+            FileEventLog event = FileEventLog.builder()
+                    .fileEventType(eventType)
+                    .uploadedFile(null)
+                    .timestamp(Timestamp.valueOf(LocalDateTime.now()))
+                    .build();
+
+
+            fileEventLogRepository.save(event);
+            return;
+        }
+
         UploadedFile file = uploadedFileRepository.findById(fileId)
                 .orElseThrow(() -> new EntityNotFoundException("Не найден файл для лога"));
 

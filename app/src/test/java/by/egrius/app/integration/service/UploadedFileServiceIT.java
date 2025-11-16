@@ -84,7 +84,7 @@ class UploadedFileServiceIT {
 
         assertNotNull(foundDto);
         assertEquals(foundDto.id(), dto.id());
-        assertEquals(foundDto.user().username(), dto.user().username());
+
 
     }
 

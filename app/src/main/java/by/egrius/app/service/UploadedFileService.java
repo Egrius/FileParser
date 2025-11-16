@@ -1,5 +1,6 @@
 package by.egrius.app.service;
 
+import by.egrius.app.dto.fileDTO.FileContentReadDto;
 import by.egrius.app.dto.fileDTO.UploadedFileReadDto;
 import by.egrius.app.entity.FileContent;
 import by.egrius.app.entity.UploadedFile;
@@ -40,8 +41,6 @@ public class UploadedFileService {
 
     @Transactional
     public UploadedFileReadDto uploadFile(MultipartFile file, UUID userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("Не удалось найти пользователя при создании файла"));
 
         String filename = Optional.ofNullable(file.getOriginalFilename()).orElse("unnamed.txt");
         try {
@@ -58,7 +57,6 @@ public class UploadedFileService {
                     .count();
 
             UploadedFile uploadedFile = UploadedFile.builder()
-                    .user(user)
                     .filename(filename)
                     .uploadTime(Timestamp.valueOf(LocalDateTime.now()))
                     .contentType(ContentType.TXT)
@@ -101,8 +99,31 @@ public class UploadedFileService {
     }
 
     public Page<UploadedFileReadDto> showAllUploadedFilesByUserId(UUID userId, Pageable pageable) {
-        Page<UploadedFile> files = uploadedFileRepository.findAllByUser_UserId(userId, pageable);
+        Page<UploadedFile> files = uploadedFileRepository.findAllFilesByUserId(userId, pageable);
         return files.map(uploadedFileReadMapper::map);
+    }
+
+    // Прописать тест
+    public FileContentReadDto getFileContent(UUID userId, UUID fileId) {
+        UploadedFile uploadedFile = uploadedFileRepository.findById(fileId)
+                .orElseThrow(() -> new EntityNotFoundException("Файл не найден"));
+
+        if (!uploadedFile.getUser().getUserId().equals(userId)) {
+            throw new org.springframework.security.access.AccessDeniedException("Файл не принадлежит пользователю");
+        }
+
+        FileContent content = uploadedFile.getFileContent();
+
+        if (content == null) {
+            throw new EntityNotFoundException("Содержимое файла отсутствует");
+        }
+
+        return new FileContentReadDto(
+                content.getRawText(),
+                content.getLineCount(),
+                content.getWordCount(),
+                content.getLanguage()
+        );
     }
 
     @Transactional
@@ -113,7 +134,7 @@ public class UploadedFileService {
         UploadedFile uploadedFile = uploadedFileRepository.findById(fileId)
                 .orElseThrow(() -> new EntityNotFoundException("Не удалось найти файл для удаления"));
 
-
+//Возможно ищлишняя проверка которая грузит БД
         if (!uploadedFile.getUser().getUserId().equals(userId)) {
             throw new AccessDeniedException("Файл не принадлежит пользователю");
         }
@@ -126,4 +147,21 @@ public class UploadedFileService {
 
         fileEventPublisher.publishDeleted(fileId);
     }
+
+    @Transactional
+    public void removeFileByFilename(UUID userId, String rawPassword, String filename) throws AccessDeniedException {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("Не удалось найти пользователя при удалении файла"));
+
+        UploadedFile uploadedFile = uploadedFileRepository.findByFilenameAndUserId(filename, userId)
+                .orElseThrow(() -> new EntityNotFoundException("Файл с таким именем не найден"));
+
+        if (!passwordEncoder.matches(rawPassword, user.getPassword())) {
+            throw new AccessDeniedException("Неверный пароль");
+        }
+
+        uploadedFileRepository.delete(uploadedFile);
+        fileEventPublisher.publishDeleted(uploadedFile.getId());
+    }
+
 }

@@ -16,7 +16,6 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -65,16 +64,6 @@ public class UserService implements UserDetailsService {
 
     public Optional<UserReadDto> getUserById(UUID id) {
         return userRepository.findById(id).map(userReadMapper::map);
-    }
-
-    public List<UploadedFileReadDto> getUploadedUserFilesById(UUID id) {
-        return userRepository.findById(id)
-                .map(
-                        user ->  user.getFiles()
-                                .stream()
-                                .map(fileReadMapper::map)
-                                .collect(Collectors.toList()))
-                .orElse(Collections.emptyList());
     }
 
     @Transactional

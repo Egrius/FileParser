@@ -34,12 +34,6 @@ public class UserController {
         return ResponseEntity.of(user);
     }
 
-    @GetMapping("/user-files/{id}")
-    public ResponseEntity<List<UploadedFileReadDto>> getUserFilesById(@PathVariable("id") UUID id) {
-        List<UploadedFileReadDto> files = userService.getUploadedUserFilesById(id);
-        return ResponseEntity.ofNullable(files);
-    }
-
     @PostMapping("/create-user")
     public ResponseEntity<UserReadDto> createUser(@Valid @RequestBody UserCreateDto userCreateDto) {
 

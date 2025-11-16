@@ -13,18 +13,18 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 import java.util.UUID;
 
+@Repository
 public interface UploadedFileRepository extends JpaRepository<UploadedFile, UUID> {
 
-    @EntityGraph(attributePaths = {"user"})
-    Page<UploadedFile> findAllByUser_UserId(UUID userId, Pageable pageable);
+    @Query("SELECT f from UploadedFile f WHERE f.user.userId = :userId")
+    Page<UploadedFile> findAllFilesByUserId(@Param("userId") UUID userId,
+                                            Pageable pageable);
 
     @Query("SELECT f FROM UploadedFile f WHERE f.filename = :filename AND f.user.userId = :userId")
     Optional<UploadedFile> findByFilenameAndUserId(@Param("filename") String filename,
                                                    @Param("userId") UUID userId);
 
 
-
-    @EntityGraph(attributePaths = {"fileContent", "fileAnalysis", "regexMatch", "fileEventLog"})
     Optional<UploadedFile> findByIdAndUser_UserId(UUID fileId, UUID userId);
 
 }

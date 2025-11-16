@@ -20,30 +20,30 @@ public class FileAnalysis {
     @Id
     private UUID id;
 
-    @OneToOne
+    @OneToOne(fetch = FetchType.LAZY)
     @MapsId
     @JoinColumn(name = "fileId")
     private UploadedFile uploadedFile;
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "starts_with_map", joinColumns = @JoinColumn(name = "fileId"))
     @MapKeyColumn(name = "prefix")
     @Column(name = "count")
     private Map<Character, Long> startsWithMap;
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "punctuation_stats", joinColumns = @JoinColumn(name="fileId"))
     @MapKeyColumn(name = "character")
     @Column(name = "count")
     private Map<Character, Long> punctuationMap;
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "top_words", joinColumns = @JoinColumn(name = "fileId"))
     @MapKeyColumn(name = "word")
     @Column(name = "count")
     private Map<String, Long> topWords;
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "words_length", joinColumns = @JoinColumn(name="fileId"))
     @MapKeyColumn(name = "topWord")
     @Column(name = "count")

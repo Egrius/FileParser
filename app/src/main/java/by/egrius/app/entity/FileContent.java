@@ -19,7 +19,7 @@ public class FileContent {
     @Id
     private UUID id;
 
-    @OneToOne
+    @OneToOne(fetch = FetchType.LAZY)
     @MapsId
     @JoinColumn(name = "fileId")
     private UploadedFile uploadedFile;

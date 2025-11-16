@@ -23,7 +23,7 @@ public class RegexMatch {
     @Column(name = "fileId")
     private UUID id;
 
-    @OneToOne
+    @OneToOne(fetch = FetchType.LAZY)
     @MapsId
     @JoinColumn(name = "fileId")
     private UploadedFile uploadedFile;
@@ -32,7 +32,7 @@ public class RegexMatch {
     @Enumerated(value = EnumType.STRING)
     private PatternType patternType;
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name="regex_matches", joinColumns = @JoinColumn(name = "fileId"))
     @MapKeyColumn(name = "patternType")
     @Column(name="match")

@@ -20,33 +20,6 @@ import java.time.LocalDate;
 
 @ControllerAdvice(assignableTypes = {UserController.class})
 public class ExceptionHandlerUserControllerAdvice {
-    @ExceptionHandler(ConstraintViolationException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    @ResponseBody
-    ValidationErrorDto onConstraintValidationException(ConstraintViolationException e) {
-        ValidationErrorDto error = new ValidationErrorDto();
-        for(ConstraintViolation v : e.getConstraintViolations()) {
-            error.getViolations().add(
-                    new ViolationDto(v.getPropertyPath().toString(), v.getMessage())
-            );
-        }
-        return error;
-    }
-
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    @ResponseBody
-    public ValidationErrorDto handleMethodArgumentNotValid(MethodArgumentNotValidException e) {
-        ValidationErrorDto error = new ValidationErrorDto();
-        e.getBindingResult().getFieldErrors().forEach(
-                fieldError -> error.getViolations().add(
-                        new ViolationDto(fieldError.getField(), fieldError.getDefaultMessage()
-                        )
-                )
-        );
-
-        return error;
-    }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)

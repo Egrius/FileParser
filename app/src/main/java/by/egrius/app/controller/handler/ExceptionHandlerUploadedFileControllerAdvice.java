@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
+import java.nio.file.AccessDeniedException;
 import java.time.LocalDate;
 
 @ControllerAdvice(assignableTypes = {FileController.class})
@@ -53,6 +54,19 @@ public class ExceptionHandlerUploadedFileControllerAdvice {
                 request.getRequestURI(),
                 LocalDate.now(),
                 HttpStatus.NOT_FOUND.value()
+        );
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    @ResponseBody
+    ExceptionDto onAccessDeniedException(AccessDeniedException e, HttpServletRequest request) {
+        return new ExceptionDto(
+                e.getMessage(),
+                "ACCESS_DENIED_ERROR",
+                request.getRequestURI(),
+                LocalDate.now(),
+                HttpStatus.FORBIDDEN.value()
         );
     }
 }

@@ -30,7 +30,6 @@ public class UserCreateMapper implements BaseMapper<UserCreateDto, User> {
         //user.setUserId(UUID.randomUUID());
         user.setUsername(object.getUsername());
         user.setEmail(object.getEmail());
-        user.setFiles(Collections.emptyList());
         user.setCreatedAt(LocalDate.now());
     }
 }

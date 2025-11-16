@@ -166,8 +166,8 @@ class UserControllerUnitTest {
 
 
         List<UploadedFileReadDto> mockFiles = List.of(
-                new UploadedFileReadDto(mockDto, mockId, "file1.txt", Timestamp.valueOf(LocalDateTime.now()), ContentType.TXT),
-                new UploadedFileReadDto(mockDto, mockId, "file2.txt", Timestamp.valueOf(LocalDateTime.now()), ContentType.TXT)
+                new UploadedFileReadDto(mockId, "file1.txt", Timestamp.valueOf(LocalDateTime.now()), ContentType.TXT),
+                new UploadedFileReadDto(mockId, "file2.txt", Timestamp.valueOf(LocalDateTime.now()), ContentType.TXT)
         );
 
         when(userService.getUploadedUserFilesById(mockId)).thenReturn(mockFiles);
