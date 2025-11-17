@@ -92,6 +92,11 @@ public class UserService implements UserDetailsService {
             user.setPassword(passwordEncoder.encode(userUpdateDto.getRawPassword()));
         }
 
+        Set<ConstraintViolation<User>> violations = validator.validate(user);
+        if(!violations.isEmpty()) {
+            throw new ConstraintViolationException(violations);
+        }
+
         userRepository.save(user);
         userRepository.flush();
         return userReadMapper.map(user);

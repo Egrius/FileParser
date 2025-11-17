@@ -110,8 +110,6 @@ class UploadedFileServiceIT {
         assertEquals(2, content.size());
         List<String> filenames = content.stream().map(UploadedFileReadDto::filename).toList();
         assertTrue(filenames.containsAll(List.of("file1.txt", "file2.txt")));
-
-        content.forEach(f -> assertEquals(userId, f.user().userId()));
     }
 
     @Test

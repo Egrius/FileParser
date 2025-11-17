@@ -154,44 +154,6 @@ class UserControllerUnitTest {
                 .andExpect(status().isNotFound());
     }
 
-    @Test
-    void getUserFilesById_shouldReturn200_whenFoundUser() throws Exception {
-        UserReadDto mockDto = new UserReadDto(
-                UUID.randomUUID(),
-                "A",
-                "testgmail@gmail.com",
-                LocalDate.now()
-        );
-        UUID mockId = mockDto.userId();
-
-
-        List<UploadedFileReadDto> mockFiles = List.of(
-                new UploadedFileReadDto(mockId, "file1.txt", Timestamp.valueOf(LocalDateTime.now()), ContentType.TXT),
-                new UploadedFileReadDto(mockId, "file2.txt", Timestamp.valueOf(LocalDateTime.now()), ContentType.TXT)
-        );
-
-        when(userService.getUploadedUserFilesById(mockId)).thenReturn(mockFiles);
-
-        mockMvc.perform(get("/user/user-files/" + mockId))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].user.username").value(mockDto.username()))
-                .andExpect(jsonPath("$[0].user.userId").value(mockId.toString()))
-                .andExpect(jsonPath("$[0].filename").value("file1.txt"))
-                .andExpect(jsonPath("$[1].user.username").value(mockDto.username()))
-                .andExpect(jsonPath("$[1].user.userId").value(mockId.toString()))
-                .andExpect(jsonPath("$[1].filename").value("file2.txt"));
-    }
-
-    @Test
-    void getUserFilesById_shouldReturn200_withEmptyBody_whenUserNotFound() throws Exception {
-        UUID mockId = UUID.randomUUID();
-
-        when(userService.getUploadedUserFilesById(mockId)).thenReturn(Collections.emptyList());
-
-        mockMvc.perform(get("/user/user-files/" + mockId))
-                .andExpect(status().isOk())
-                .andExpect(content().json("[]"));
-    }
 
     @Test
     void updateUser_shouldReturn200_whenUpdateDtoCorrect_andUserFound() throws Exception {

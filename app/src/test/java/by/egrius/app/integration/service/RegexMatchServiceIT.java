@@ -98,7 +98,6 @@ class RegexMatchServiceIT {
                 .build();
 
         uploadedFile.setFileContent(fileContent);
-        user.setFiles(List.of(uploadedFile));
 
         userRepository.save(user);
         userRepository.flush();
