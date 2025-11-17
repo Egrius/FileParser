@@ -83,7 +83,7 @@ public class UploadedFileService {
     }
 
     public UploadedFileReadDto showUploadedFileById(UUID userId, UUID fileId) {
-        UploadedFile uploadedFile = uploadedFileRepository.findByIdAndUser_UserId(fileId, userId)
+        UploadedFile uploadedFile = uploadedFileRepository.findByFileIdAndUserId(fileId, userId)
                 .orElseThrow(() -> new EntityNotFoundException("Файл не найден или не принадлежит пользователю"));
 
         return uploadedFileReadMapper.map(uploadedFile);
@@ -127,7 +127,7 @@ public class UploadedFileService {
     }
 
     @Transactional
-    public void removeFile(UUID userId, String rawPassword, UUID fileId) throws AccessDeniedException {
+    public void removeFileById(UUID userId, String rawPassword, UUID fileId) throws AccessDeniedException {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("Не удалось найти пользователя при удалении файла"));
 

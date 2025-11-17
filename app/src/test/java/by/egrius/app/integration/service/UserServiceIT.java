@@ -39,7 +39,6 @@ class UserServiceIT {
         User userToFind = User.builder()
                 .userId(idToFindUser)
                 .username(nameToFindUser)
-                .files(Collections.emptyList())
                 .email("delete@gmail.com")
                 .password(passwordEncoder.encode("123"))
                 .createdAt(LocalDate.now())

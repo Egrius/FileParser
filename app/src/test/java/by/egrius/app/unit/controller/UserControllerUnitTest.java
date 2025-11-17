@@ -170,8 +170,6 @@ class UserControllerUnitTest {
                 new UploadedFileReadDto(mockId, "file2.txt", Timestamp.valueOf(LocalDateTime.now()), ContentType.TXT)
         );
 
-        when(userService.getUploadedUserFilesById(mockId)).thenReturn(mockFiles);
-
         mockMvc.perform(get("/user/user-files/" + mockId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].user.username").value(mockDto.username()))
@@ -185,8 +183,6 @@ class UserControllerUnitTest {
     @Test
     void getUserFilesById_shouldReturn200_withEmptyBody_whenUserNotFound() throws Exception {
         UUID mockId = UUID.randomUUID();
-
-        when(userService.getUploadedUserFilesById(mockId)).thenReturn(Collections.emptyList());
 
         mockMvc.perform(get("/user/user-files/" + mockId))
                 .andExpect(status().isOk())

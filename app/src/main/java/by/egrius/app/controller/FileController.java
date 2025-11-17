@@ -76,7 +76,6 @@ public class FileController {
         return ResponseEntity.ok(uploadedFileReadDto);
     }
 
-
 //Затестить
     @DeleteMapping("/delete/by-id")
     public ResponseEntity<Void> deleteFileById(@Valid @RequestBody FileDeleteRequestDto requestDto,
@@ -84,7 +83,7 @@ public class FileController {
             throws AccessDeniedException {
 
         UUID userId = userPrincipal.getId();
-        uploadedFileService.removeFile(userId, requestDto.rawPassword(), requestDto.fileId());
+        uploadedFileService.removeFileById(userId, requestDto.rawPassword(), requestDto.fileId());
         return ResponseEntity.ok().build();
     }
 

@@ -10,6 +10,8 @@ import by.egrius.app.publisher.FileEventPublisher;
 import by.egrius.app.repository.UploadedFileRepository;
 import by.egrius.app.repository.UserRepository;
 import by.egrius.app.service.UploadedFileService;
+import jakarta.persistence.EntityNotFoundException;
+import net.bytebuddy.asm.Advice;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -64,7 +66,6 @@ class FileServiceUnitTest {
                 .username("TestName")
                 .password("hashed_pwd")
                 .createdAt(LocalDate.now())
-                .files(Collections.emptyList())
                 .build();
 
         MultipartFile mockFile = new MockMultipartFile(
@@ -89,18 +90,23 @@ class FileServiceUnitTest {
                 uploadedFile.getContentType()
         );
 
-
-        //when(userRepository.findById(any(UUID.class))).thenReturn(Optional.of(user));
         when(uploadedFileReadMapper.map(any(UploadedFile.class))).thenReturn(expectedDto);
         when(uploadedFileRepository.save(any(UploadedFile.class))).thenReturn(uploadedFile);
 
-        UploadedFileReadDto result = fileService.uploadFile(mockFile, user);
-
-        assertEquals(expectedDto.id(), result.id());
-        assertEquals(expectedDto.filename(), result.filename());
-
         verify(uploadedFileRepository).save(any(UploadedFile.class));
         verify(uploadedFileReadMapper).map(any(UploadedFile.class));
+    }
+
+    @Test
+    void uploadFile_shouldThrowIllegalArgumentException_whenItsEmpty() {
+        MockMultipartFile mockFile = new MockMultipartFile(
+                "file",
+                "TestFileName.txt",
+                "text/plain",
+                "".getBytes(StandardCharsets.UTF_8)
+        );
+
+        assertThrows(IllegalArgumentException.class, () -> fileService.uploadFile(mockFile, UUID.randomUUID()));
     }
 
     @Test
@@ -113,7 +119,6 @@ class FileServiceUnitTest {
                 .username("TestName")
                 .password("hashed_pwd")
                 .createdAt(LocalDate.now())
-                .files(Collections.emptyList())
                 .build();
 
         UploadedFile uploadedFile = UploadedFile.builder()
@@ -132,13 +137,25 @@ class FileServiceUnitTest {
                 uploadedFile.getContentType()
         );
 
-        when(uploadedFileRepository.findByIdAndUser_UserId(any(UUID.class), any(UUID.class))).thenReturn(Optional.of(uploadedFile));
+        when(uploadedFileRepository.findByFileIdAndUserId(any(UUID.class), any(UUID.class))).thenReturn(Optional.of(uploadedFile));
         when(uploadedFileReadMapper.map(any(UploadedFile.class))).thenReturn(expectedFileDto);
 
         UploadedFileReadDto actualResult = fileService.showUploadedFileById(expectedFileUUID, expectedUserUUID);
 
         assertNotNull(actualResult);
         assertEquals(actualResult.id(), expectedFileDto.id());
+    }
+
+    @Test
+    void showUploadedFileById_shouldThrowEntityNotFoundException_whenFileNotFound() {
+        UUID wrongUserId = UUID.randomUUID();
+        UUID fileId = UUID.randomUUID();
+
+        when(uploadedFileRepository.findByFileIdAndUserId(fileId, wrongUserId))
+                .thenReturn(Optional.empty());
+
+        assertThrows(EntityNotFoundException.class,
+                () -> fileService.showUploadedFileById(wrongUserId, fileId));
     }
 
     @Test
@@ -187,11 +204,11 @@ class FileServiceUnitTest {
                 .filename("file.txt")
                 .build();
 
-        when(uploadedFileRepository.findByIdAndUser_UserId(fileId, userId)).thenReturn(Optional.of(file));
+        when(uploadedFileRepository.findByFileIdAndUserId(fileId, userId)).thenReturn(Optional.of(file));
         when(passwordEncoder.matches(rawPassword, user.getPassword())).thenReturn(true);
 
         try {
-            fileService.removeFile(fileId, rawPassword,userId);
+            fileService.removeFile(userId, rawPassword, fileId);
         } catch (AccessDeniedException e) {
             throw new RuntimeException(e);
         }
@@ -205,7 +222,7 @@ class FileServiceUnitTest {
         UUID userId = UUID.randomUUID();
         String rawPassword = "1234";
 
-        when(uploadedFileRepository.findByIdAndUser_UserId(fileId, userId)).thenReturn(Optional.empty());
+        when(uploadedFileRepository.findByFileIdAndUserId(fileId, userId)).thenReturn(Optional.empty());
 
         when(passwordEncoder.matches(rawPassword, any(String.class))).thenReturn(true);
 

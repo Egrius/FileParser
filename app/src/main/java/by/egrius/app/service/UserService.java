@@ -39,7 +39,6 @@ public class UserService implements UserDetailsService {
     private final UserReadMapper userReadMapper;
     private final  UserCreateMapper userCreateMapper;
     private final UserUpdateMapper userUpdateMapper;
-    private final UploadedFileReadMapper fileReadMapper;
 
     private final Validator validator;
 
@@ -90,6 +89,11 @@ public class UserService implements UserDetailsService {
 
         if (userUpdateDto.getRawPassword() != null && !userUpdateDto.getRawPassword().isBlank()) {
             user.setPassword(passwordEncoder.encode(userUpdateDto.getRawPassword()));
+        }
+
+        Set<ConstraintViolation<User>> violations = validator.validate(user);
+        if(!violations.isEmpty()) {
+            throw new ConstraintViolationException(violations);
         }
 
         userRepository.save(user);

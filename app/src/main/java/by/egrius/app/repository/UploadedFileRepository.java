@@ -24,7 +24,8 @@ public interface UploadedFileRepository extends JpaRepository<UploadedFile, UUID
     Optional<UploadedFile> findByFilenameAndUserId(@Param("filename") String filename,
                                                    @Param("userId") UUID userId);
 
-
-    Optional<UploadedFile> findByIdAndUser_UserId(UUID fileId, UUID userId);
+    @Query("SELECT f FROM UploadedFile f WHERE f.fileId = :fileId AND f.user.userId = :userId")
+    Optional<UploadedFile> findByFileIdAndUserId(@Param("fileId") UUID fileId,
+                                                 @Param("userId") UUID userId);
 
 }
