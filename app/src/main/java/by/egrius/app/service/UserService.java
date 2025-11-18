@@ -39,7 +39,6 @@ public class UserService implements UserDetailsService {
     private final UserReadMapper userReadMapper;
     private final  UserCreateMapper userCreateMapper;
     private final UserUpdateMapper userUpdateMapper;
-    private final UploadedFileReadMapper fileReadMapper;
 
     private final Validator validator;
 

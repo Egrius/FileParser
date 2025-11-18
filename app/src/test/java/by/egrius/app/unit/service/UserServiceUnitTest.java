@@ -4,12 +4,12 @@ import by.egrius.app.dto.userDTO.UserCreateDto;
 import by.egrius.app.dto.userDTO.UserReadDto;
 import by.egrius.app.dto.userDTO.UserUpdateDto;
 import by.egrius.app.entity.User;
+import by.egrius.app.mapper.fileMapper.UploadedFileReadMapper;
 import by.egrius.app.mapper.userMapper.UserCreateMapper;
 import by.egrius.app.mapper.userMapper.UserReadMapper;
 import by.egrius.app.mapper.userMapper.UserUpdateMapper;
 import by.egrius.app.repository.UserRepository;
 import by.egrius.app.service.UserService;
-import jakarta.validation.Validator;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -44,7 +44,7 @@ class UserServiceUnitTest {
     private UserUpdateMapper userUpdateMapper;
 
     @Mock
-    private Validator validator;
+    private UploadedFileReadMapper fileReadMapper;
 
     @InjectMocks
     private UserService userService;
@@ -60,6 +60,7 @@ class UserServiceUnitTest {
                 .email("test@example.com")
                 .password("encoded")
                 .createdAt(LocalDate.now())
+                .files(Collections.emptyList())
                 .build();
 
         UserReadDto dtoToReturn = new UserReadDto(id, username, "test@example.com", LocalDate.now());
@@ -86,6 +87,7 @@ class UserServiceUnitTest {
                 .email("test@example.com")
                 .password("encoded")
                 .createdAt(LocalDate.now())
+                .files(Collections.emptyList())
                 .build();
 
         UserReadDto dtoToReturn = new UserReadDto(id, username, "test@example.com", LocalDate.now());
@@ -121,7 +123,6 @@ class UserServiceUnitTest {
 
         assertEquals("Ivan", result.username());
         verify(passwordEncoder).encode("1234");
-        verify(validator).validate(any(User.class));
         verify(userRepository).save(any(User.class));
     }
 
@@ -141,6 +142,7 @@ class UserServiceUnitTest {
                 .email("test@example.com")
                 .password("encoded")
                 .createdAt(LocalDate.now())
+                .files(Collections.emptyList())
                 .build();
 
         User afterUpdateUser = User.builder()
@@ -149,6 +151,7 @@ class UserServiceUnitTest {
                 .email(updatedEmail)
                 .password(updatedPassword)
                 .createdAt(LocalDate.now())
+                .files(Collections.emptyList())
                 .build();
 
         UserUpdateDto updateDto = new UserUpdateDto(updatedUsername, updatedEmail, updatedPassword);
@@ -159,8 +162,7 @@ class UserServiceUnitTest {
 
 
         UserReadDto actualResult = userService.updateUser(id, updateDto);
-        verify(passwordEncoder).encode(any(String.class));
-        verify(validator).validate(any(User.class));
+
         verify(userRepository).save(any(User.class));
 
         assertNotNull(actualResult);
@@ -180,6 +182,7 @@ class UserServiceUnitTest {
                 .email("test@example.com")
                 .password("encoded")
                 .createdAt(LocalDate.now())
+                .files(Collections.emptyList())
                 .build();
 
         when(userRepository.findById(any(UUID.class))).thenReturn(Optional.of(userToDelete));

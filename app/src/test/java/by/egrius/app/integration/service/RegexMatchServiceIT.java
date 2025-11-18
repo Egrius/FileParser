@@ -77,7 +77,7 @@ class RegexMatchServiceIT {
         """;
 
         user = User.builder()
-                .userId(UUID.randomUUID())
+
                 .username("RegexMatchUser")
                 .email("regexMatch@gmail.com")
                 .password(passwordEncoder.encode("1234"))
@@ -85,7 +85,7 @@ class RegexMatchServiceIT {
                 .build();
 
         uploadedFile = UploadedFile.builder()
-                .id(UUID.randomUUID())         // вручную назначаем id или используем @GeneratedValue
+
                 .user(user)
                 .filename("testFile.txt")
                 .uploadTime(Timestamp.valueOf(LocalDateTime.now()))
