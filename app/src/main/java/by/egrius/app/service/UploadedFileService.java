@@ -131,7 +131,7 @@ public class UploadedFileService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("Не удалось найти пользователя при удалении файла"));
 
-        UploadedFile uploadedFile = uploadedFileRepository.findById(fileId)
+        UploadedFile uploadedFile = uploadedFileRepository.findByFileIdAndUserId(fileId, userId)
                 .orElseThrow(() -> new EntityNotFoundException("Не удалось найти файл для удаления"));
 
 //Возможно ищлишняя проверка которая грузит БД
@@ -150,6 +150,7 @@ public class UploadedFileService {
 
     @Transactional
     public void removeFileByFilename(UUID userId, String rawPassword, String filename) throws AccessDeniedException {
+        // Возможно можно убрать поиск пользователя если у меня идет поиск по юник констрэинту
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("Не удалось найти пользователя при удалении файла"));
 

@@ -111,7 +111,6 @@ class UploadedFileServiceIT {
         List<String> filenames = content.stream().map(UploadedFileReadDto::filename).toList();
         assertTrue(filenames.containsAll(List.of("file1.txt", "file2.txt")));
 
-        content.forEach(f -> assertEquals(userId, f.user().userId()));
     }
 
     @Test
@@ -120,7 +119,7 @@ class UploadedFileServiceIT {
         UploadedFileReadDto dtoToDelete = uploadedFileService.uploadFile(fileToDelete, userId);
 
         try {
-            uploadedFileService.removeFile(userId, "1234", dtoToDelete.id());
+            uploadedFileService.removeFileById(userId, "1234", dtoToDelete.id());
         } catch (AccessDeniedException e) {
             System.out.println("Пароль не подходит");
         }
