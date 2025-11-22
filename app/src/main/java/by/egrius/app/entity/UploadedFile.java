@@ -21,6 +21,7 @@
         @JoinColumn(name = "userId", nullable = false)
         private User user;
 
+
         @Id
         @GeneratedValue
         @Column(name = "fileId", updatable = false, nullable = false)

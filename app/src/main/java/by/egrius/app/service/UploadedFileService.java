@@ -42,6 +42,9 @@ public class UploadedFileService {
     @Transactional
     public UploadedFileReadDto uploadFile(MultipartFile file, UUID userId) {
 
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("Пользователь не найден"));
+
         String filename = Optional.ofNullable(file.getOriginalFilename()).orElse("unnamed.txt");
         try {
             byte[] fileBytes = file.getBytes();
@@ -57,6 +60,7 @@ public class UploadedFileService {
                     .count();
 
             UploadedFile uploadedFile = UploadedFile.builder()
+                    .user(user)
                     .filename(filename)
                     .uploadTime(Timestamp.valueOf(LocalDateTime.now()))
                     .contentType(ContentType.TXT)

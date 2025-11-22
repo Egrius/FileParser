@@ -37,6 +37,7 @@ import java.util.UUID;
 
 import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
 class FileServiceUnitTest {
@@ -187,7 +188,7 @@ class FileServiceUnitTest {
     }
 
     @Test
-    void removeFile_shouldDeleteFileIfExists() {
+    void removeFileById_shouldDeleteFileIfExists() {
         UUID fileId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
         String rawPassword = "1234";
@@ -204,33 +205,68 @@ class FileServiceUnitTest {
                 .filename("file.txt")
                 .build();
 
-        when(uploadedFileRepository.findByFileIdAndUserId(fileId, userId)).thenReturn(Optional.of(file));
+        when(userRepository.findById(any(UUID.class))).thenReturn(Optional.of(user));
+        when(uploadedFileRepository.findById(fileId)).thenReturn(Optional.of(file));
         when(passwordEncoder.matches(rawPassword, user.getPassword())).thenReturn(true);
+        verifyNoMoreInteractions(uploadedFileRepository, passwordEncoder);
 
         try {
-            fileService.removeFile(userId, rawPassword, fileId);
+            fileService.removeFileById(userId, rawPassword, fileId);
         } catch (AccessDeniedException e) {
             throw new RuntimeException(e);
         }
 
-        verify(uploadedFileRepository).deleteById(fileId);
+        verify(uploadedFileRepository).delete(any());
     }
 
     @Test
-    void removeFile_shouldNotDeleteIfFileNotFound() {
+    void removeFileById_shouldNotDeleteIfFileNotFound() throws AccessDeniedException {
         UUID fileId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
         String rawPassword = "1234";
 
-        when(uploadedFileRepository.findByFileIdAndUserId(fileId, userId)).thenReturn(Optional.empty());
 
-        when(passwordEncoder.matches(rawPassword, any(String.class))).thenReturn(true);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(User.builder().build()));
+        when(uploadedFileRepository.findById(fileId)).thenReturn(Optional.empty());
+
+        assertThrows(EntityNotFoundException.class,
+                () -> fileService.removeFileById(userId, rawPassword,fileId));
+
+        verify(passwordEncoder, never()).matches(eq(rawPassword), anyString());
+        verify(uploadedFileRepository, never()).delete(any());
+    }
+
+    @Test
+    void removeFileByFilename_shouldDeleteFileIfExists() {
+        UUID fileId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        String rawPassword = "1234";
+        String filename = "file.txt";
+
+        User user = User.builder()
+                .userId(userId)
+                .password("hashed_password")
+                .username("TestUser")
+                .build();
+
+        UploadedFile file = UploadedFile.builder()
+                .id(fileId)
+                .user(user)
+                .filename("file.txt")
+                .build();
+
+        when(userRepository.findById(any(UUID.class))).thenReturn(Optional.of(user));
+        when(uploadedFileRepository.findByFilenameAndUserId(filename, userId)).thenReturn(Optional.of(file));
+        when(passwordEncoder.matches(rawPassword, user.getPassword())).thenReturn(true);
+        verifyNoMoreInteractions(uploadedFileRepository, passwordEncoder);
 
         try {
-            fileService.removeFile(fileId, rawPassword,userId);
+            fileService.removeFileByFilename(userId, rawPassword, filename);
         } catch (AccessDeniedException e) {
             throw new RuntimeException(e);
         }
-        verify(uploadedFileRepository, never()).deleteById(any());
+
+        verify(uploadedFileRepository).delete(file);
+        verify(fileEventPublisher).publishDeleted(any());
     }
 }
