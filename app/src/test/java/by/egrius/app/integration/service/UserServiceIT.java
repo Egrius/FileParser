@@ -7,10 +7,12 @@ import by.egrius.app.entity.User;
 import by.egrius.app.repository.UserRepository;
 import by.egrius.app.service.UserService;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.ConstraintViolationException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.Collections;
@@ -18,7 +20,6 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
-
 
 @SpringBootTest
 class UserServiceIT {
@@ -32,12 +33,11 @@ class UserServiceIT {
     private PasswordEncoder passwordEncoder;
 
     @Test
+    @Transactional
     void getUserByUsername_ShouldReturnCorrectUser() {
-        UUID idToFindUser = UUID.randomUUID();
         String nameToFindUser = "TestToFind";
 
         User userToFind = User.builder()
-                .userId(idToFindUser)
                 .username(nameToFindUser)
                 .email("delete@gmail.com")
                 .password(passwordEncoder.encode("123"))
@@ -45,17 +45,18 @@ class UserServiceIT {
                 .build();
 
         userRepository.save(userToFind);
+        userRepository.flush();
 
         Optional<UserReadDto> found = userService.getUserByUsername(nameToFindUser);
 
         assertTrue(found.isPresent());
 
-        assertEquals(found.get().userId(), idToFindUser);
         assertEquals(found.get().username(), nameToFindUser);
     }
 
 
     @Test
+    @Transactional
     void createUser_shouldPersistUserAndReturnDto() {
 
         UserCreateDto dto = new UserCreateDto("Aleksey", "alex@example.com", "1234");
@@ -71,8 +72,20 @@ class UserServiceIT {
     }
 
     @Test
+    @Transactional
+    void updateUser_withNonExistingId_shouldThrowEntityNotFoundException() {
+        UUID nonExistingId = UUID.randomUUID();
+        UserUpdateDto updateDto = new UserUpdateDto("NewName", "new@example.com", "newpass");
+
+        assertThrows(EntityNotFoundException.class, () -> userService.updateUser(nonExistingId, updateDto));
+    }
+
+
+    @Test
+    @Transactional
     void updateUser_ShouldChangeDatabaseEntity() {
         String nameToFindUser = "testuser";
+        userRepository.save(new User(null ,nameToFindUser, "testEmail@gmail.com","123", LocalDate.now()));
         Optional<User> userToUpdate = userRepository.findByUsername(nameToFindUser);
 
         assertTrue(userToUpdate.isPresent());
@@ -100,16 +113,52 @@ class UserServiceIT {
     }
 
     @Test
+    @Transactional
+    void updateUser_withoutPassword_shouldKeepOldPassword() {
+        User user = userRepository.save(new User(null, "NoPassUser", "nopass@example.com", passwordEncoder.encode("oldpass"), LocalDate.now()));
+        UUID id = user.getUserId();
+
+        UserUpdateDto updateDto = new UserUpdateDto("UpdatedName", "updated@example.com", null);
+        userService.updateUser(id, updateDto);
+
+        User updated = userRepository.findById(id).orElseThrow();
+        assertTrue(passwordEncoder.matches("oldpass", updated.getPassword()));
+    }
+
+    @Test
+    @Transactional
     void delete_ShouldDeleteUserFromDatabase() {
+        String nameToDelete = "TestUserToDelete";
+        String emailToDelete = "emailToDelte@gmail.com";
+        String rawPasswordToDelete = "1234";
+        String encodedPassword = passwordEncoder.encode(rawPasswordToDelete);
 
-        User user = userRepository.findByUsername("TestUserToUploadFile_2").orElseThrow(
-                () -> new EntityNotFoundException("Not found a user to remove"));
+        userRepository.save(new User(null, nameToDelete, emailToDelete, encodedPassword, LocalDate.now()));
 
-        UUID idToDelete = user.getUserId();
+        User userToDelete = userRepository.findByUsername(nameToDelete).orElseThrow(
+                () -> new EntityNotFoundException("Не удалось найти пользователя перед его удалением"));
 
-        userService.deleteUser(idToDelete, "1234");
+        UUID idToDelete = userToDelete.getUserId();
+
+        userService.deleteUser(userToDelete.getUserId(), rawPasswordToDelete);
 
         Optional<User> deletedUser = userRepository.findById(idToDelete);
         assertTrue(deletedUser.isEmpty());
+    }
+
+    @Test
+    @Transactional
+    void deleteUser_withWrongPassword_shouldThrowSecurityException() {
+        User user = userRepository.save(new User(null, "UserToDelete", "delete@example.com", passwordEncoder.encode("correct"), LocalDate.now()));
+
+        assertThrows(SecurityException.class, () -> userService.deleteUser(user.getUserId(), "wrong"));
+    }
+
+    @Test
+    @Transactional
+    void deleteUser_withNonExistingId_shouldThrowEntityNotFoundException() {
+        UUID nonExistingId = UUID.randomUUID();
+
+        assertThrows(EntityNotFoundException.class, () -> userService.deleteUser(nonExistingId, "1234"));
     }
 }

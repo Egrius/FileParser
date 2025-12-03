@@ -20,12 +20,16 @@ public interface UploadedFileRepository extends JpaRepository<UploadedFile, UUID
     Page<UploadedFile> findAllFilesByUserId(@Param("userId") UUID userId,
                                             Pageable pageable);
 
-    @Query("SELECT f FROM UploadedFile f WHERE f.filename = :filename AND f.user.userId = :userId")
+    @Query("SELECT f FROM UploadedFile f JOIN FETCH f.user u WHERE f.filename = :filename AND u.userId = :userId")
     Optional<UploadedFile> findByFilenameAndUserId(@Param("filename") String filename,
                                                    @Param("userId") UUID userId);
 
-    @Query("SELECT f FROM UploadedFile f WHERE f.id = id AND f.user.userId = :userId")
-    Optional<UploadedFile> findByFileIdAndUserId(@Param("id") UUID fileId,
+    @Query("SELECT f FROM UploadedFile f JOIN FETCH f.user u WHERE f.id = :fileId AND u.userId = :userId")
+    Optional<UploadedFile> findByFileIdAndUserId(@Param("fileId") UUID fileId,
                                                  @Param("userId") UUID userId);
+
+    @Query("SELECT f FROM UploadedFile f JOIN FETCH f.user u JOIN FETCH f.fileContent c WHERE f.id = :fileId AND u.userId = :userId")
+    Optional<UploadedFile> findByIdWithUserAndContent(@Param("fileId") UUID fileId,
+                                                      @Param("userId") UUID userId);
 
 }
