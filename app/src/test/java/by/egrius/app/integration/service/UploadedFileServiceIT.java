@@ -6,9 +6,7 @@ import by.egrius.app.entity.User;
 import by.egrius.app.repository.UploadedFileRepository;
 import by.egrius.app.repository.UserRepository;
 import by.egrius.app.service.UploadedFileService;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.Page;
@@ -44,10 +42,10 @@ class UploadedFileServiceIT {
 
     private User user;
 
-    @BeforeAll
+    @BeforeEach
     void setup() {
+
          user = User.builder()
-                .userId(UUID.randomUUID())
                 .email("emailForFun_2@gmail.com")
                 .username("TestUserToUploadFile_2")
                 .password(passwordEncoder.encode("1234"))
@@ -55,6 +53,11 @@ class UploadedFileServiceIT {
                 .build();
         userRepository.save(user);
         userId = user.getUserId();
+    }
+
+    @AfterEach
+    void cleanup() {
+        userRepository.deleteById(userId);
     }
 
     @Test
@@ -112,7 +115,7 @@ class UploadedFileServiceIT {
         assertTrue(filenames.containsAll(List.of("file1.txt", "file2.txt")));
 
     }
-
+// test
     @Test
     void removeFile_shouldDeleteFileIfExists() {
         MultipartFile fileToDelete = new MockMultipartFile("file1", "file1.txt", "text/plain", "hello world_1\nsecond line".getBytes());

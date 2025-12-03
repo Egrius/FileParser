@@ -38,7 +38,6 @@ class UserServiceIT {
         String nameToFindUser = "TestToFind";
 
         User userToFind = User.builder()
-                .userId(null)
                 .username(nameToFindUser)
                 .email("delete@gmail.com")
                 .password(passwordEncoder.encode("123"))
@@ -46,6 +45,7 @@ class UserServiceIT {
                 .build();
 
         userRepository.save(userToFind);
+        userRepository.flush();
 
         Optional<UserReadDto> found = userService.getUserByUsername(nameToFindUser);
 

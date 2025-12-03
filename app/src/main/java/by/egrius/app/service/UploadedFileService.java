@@ -33,11 +33,11 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class UploadedFileService {
 
-    private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final UploadedFileRepository uploadedFileRepository;
     private final UploadedFileReadMapper uploadedFileReadMapper;
     private final FileEventPublisher fileEventPublisher;
+    private final UserRepository userRepository;
 
     @Transactional
     public UploadedFileReadDto uploadFile(MultipartFile file, UUID userId) {
@@ -56,10 +56,14 @@ public class UploadedFileService {
                     .filter(word -> !word.isBlank())
                     .count();
 
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new EntityNotFoundException("User not found"));
+
             UploadedFile uploadedFile = UploadedFile.builder()
                     .filename(filename)
                     .uploadTime(Timestamp.valueOf(LocalDateTime.now()))
                     .contentType(ContentType.TXT)
+                    .user(user)
                     .build();
 
             FileContent fileContent = FileContent.builder()
@@ -105,19 +109,14 @@ public class UploadedFileService {
 
     // Прописать тест
     public FileContentReadDto getFileContent(UUID userId, UUID fileId) {
-        UploadedFile uploadedFile = uploadedFileRepository.findById(fileId)
-                .orElseThrow(() -> new EntityNotFoundException("Файл не найден"));
-
-        if (!uploadedFile.getUser().getUserId().equals(userId)) {
-            throw new org.springframework.security.access.AccessDeniedException("Файл не принадлежит пользователю");
-        }
+        UploadedFile uploadedFile = uploadedFileRepository.findByIdWithUserAndContent(fileId, userId)
+                .orElseThrow(() -> new EntityNotFoundException("Файл не найден или не принадлежит пользователю"));
 
         FileContent content = uploadedFile.getFileContent();
 
         if (content == null) {
             throw new EntityNotFoundException("Содержимое файла отсутствует");
         }
-
         return new FileContentReadDto(
                 content.getRawText(),
                 content.getLineCount(),
@@ -128,36 +127,25 @@ public class UploadedFileService {
 
     @Transactional
     public void removeFileById(UUID userId, String rawPassword, UUID fileId) throws AccessDeniedException {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("Не удалось найти пользователя при удалении файла"));
 
         UploadedFile uploadedFile = uploadedFileRepository.findByFileIdAndUserId(fileId, userId)
                 .orElseThrow(() -> new EntityNotFoundException("Не удалось найти файл для удаления"));
 
-//Возможно ищлишняя проверка которая грузит БД
-        if (!uploadedFile.getUser().getUserId().equals(userId)) {
-            throw new AccessDeniedException("Файл не принадлежит пользователю");
-        }
-
-        if (!passwordEncoder.matches(rawPassword, user.getPassword())) {
+        if (!passwordEncoder.matches(rawPassword, uploadedFile.getUser().getPassword())) {
             throw new AccessDeniedException("Неверный пароль");
         }
 
         uploadedFileRepository.delete(uploadedFile);
-
         fileEventPublisher.publishDeleted(fileId);
     }
 
     @Transactional
     public void removeFileByFilename(UUID userId, String rawPassword, String filename) throws AccessDeniedException {
-        // Возможно можно убрать поиск пользователя если у меня идет поиск по юник констрэинту
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("Не удалось найти пользователя при удалении файла"));
 
         UploadedFile uploadedFile = uploadedFileRepository.findByFilenameAndUserId(filename, userId)
                 .orElseThrow(() -> new EntityNotFoundException("Файл с таким именем не найден"));
 
-        if (!passwordEncoder.matches(rawPassword, user.getPassword())) {
+        if (!passwordEncoder.matches(rawPassword, uploadedFile.getUser().getPassword())) {
             throw new AccessDeniedException("Неверный пароль");
         }
 
