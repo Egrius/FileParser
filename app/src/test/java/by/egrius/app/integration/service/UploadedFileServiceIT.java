@@ -1,11 +1,11 @@
 package by.egrius.app.integration.service;
 
 import by.egrius.app.dto.fileDTO.UploadedFileReadDto;
-import by.egrius.app.entity.UploadedFile;
-import by.egrius.app.entity.User;
+import by.egrius.app.entity.*;
 import by.egrius.app.repository.UploadedFileRepository;
 import by.egrius.app.repository.UserRepository;
 import by.egrius.app.service.UploadedFileService;
+import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -14,6 +14,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.file.AccessDeniedException;
@@ -45,7 +46,7 @@ class UploadedFileServiceIT {
     @BeforeEach
     void setup() {
 
-         user = User.builder()
+        user = User.builder()
                 .email("emailForFun_2@gmail.com")
                 .username("TestUserToUploadFile_2")
                 .password(passwordEncoder.encode("1234"))
@@ -72,6 +73,30 @@ class UploadedFileServiceIT {
         UploadedFile persisted = uploadedFileRepository.findById(dto.id()).orElseThrow();
         assertEquals(2, persisted.getFileContent().getLineCount());
         assertEquals(4, persisted.getFileContent().getWordCount());
+    }
+
+    @Test
+    void uploadEmptyFile_shouldThrowIllegalArgumentException() {
+        MultipartFile emptyFile = new MockMultipartFile("file", "empty.txt", "text/plain", new byte[0]);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> uploadedFileService.uploadFile(emptyFile, userId)
+        );
+    }
+
+    @Test
+    void uploadFileWithoutName_shouldUseUnnamedTxt() {
+        MultipartFile fileWithoutName = new MockMultipartFile(
+                "file",
+                null,
+                "text/plain",
+                "content".getBytes()
+        );
+
+        UploadedFileReadDto dto = uploadedFileService.uploadFile(fileWithoutName, userId);
+
+        assertNotNull(dto);
+        assertEquals("unnamed.txt", dto.filename());
     }
 
     @Test
@@ -115,7 +140,7 @@ class UploadedFileServiceIT {
         assertTrue(filenames.containsAll(List.of("file1.txt", "file2.txt")));
 
     }
-// test
+
     @Test
     void removeFile_shouldDeleteFileIfExists() {
         MultipartFile fileToDelete = new MockMultipartFile("file1", "file1.txt", "text/plain", "hello world_1\nsecond line".getBytes());
@@ -127,4 +152,68 @@ class UploadedFileServiceIT {
             System.out.println("Пароль не подходит");
         }
     }
+
+    @Test
+    void removeFileById_shouldNotDeleteFileIfWrongPassword() {
+        MultipartFile fileToDelete = new MockMultipartFile("file1", "file1.txt", "text/plain", "hello world_1\nsecond line".getBytes());
+        UploadedFileReadDto dtoToDelete = uploadedFileService.uploadFile(fileToDelete, userId);
+        String wrongPassword = "wrong_pass";
+        assertThrows(AccessDeniedException.class,
+                () -> uploadedFileService.removeFileById(userId, wrongPassword, dtoToDelete.id())
+        );
+        UploadedFileReadDto foundFileAfterDeletionFail =
+                uploadedFileService.showUploadedFileByFilename(dtoToDelete.filename(), userId);
+        assertNotNull(foundFileAfterDeletionFail);
+    }
+
+
+    @Test
+    void removeFileByFilename_shouldNotDeleteIfWrongPassword() {
+        MultipartFile fileToDelete = new MockMultipartFile("file", "file.txt", "text/plain", "hello world".getBytes());
+        UploadedFileReadDto dtoToDelete = uploadedFileService.uploadFile(fileToDelete, userId);
+
+        assertThrows(AccessDeniedException.class,
+                () -> uploadedFileService.removeFileByFilename(userId, "wrong_pass", dtoToDelete.filename())
+        );
+
+        UploadedFileReadDto found = uploadedFileService.showUploadedFileByFilename(dtoToDelete.filename(), userId);
+        assertNotNull(found);
+    }
+
+    @Test
+    void removeFile_shouldThrowIfFileNotFound() {
+        UUID randomFileId = UUID.randomUUID();
+        assertThrows(EntityNotFoundException.class,
+                () -> uploadedFileService.removeFileById(userId, "1234", randomFileId)
+        );
+    }
+
+    @Test
+    @Transactional
+    void anotherUserCantRemoveOthersFile_shouldThrowEntityNotFound() {
+        MultipartFile fileToDelete = new MockMultipartFile("file", "file.txt", "text/plain", "hello world".getBytes());
+        UploadedFileReadDto dtoToDelete = uploadedFileService.uploadFile(fileToDelete, userId);
+
+        User anotherUser = User.builder()
+                .email("emailForFun_ANOTHER@gmail.com")
+                .username("TestUserAnother")
+                .password(passwordEncoder.encode("1234"))
+                .createdAt(LocalDate.now())
+                .build();
+
+        userRepository.save(anotherUser);
+        userRepository.flush();
+
+        UUID anotherUserId = userRepository.findByUsername("TestUserAnother").get().getUserId();
+
+        assertNotNull(anotherUserId);
+
+        MultipartFile anotherUserFile= new MockMultipartFile("file", "file.txt", "text/plain", "hello world".getBytes());
+        UploadedFileReadDto dtoAnotherUserFile = uploadedFileService.uploadFile(anotherUserFile, anotherUserId);
+
+        assertThrows(EntityNotFoundException.class,
+                () -> uploadedFileService.removeFileById(userId, "1234", dtoAnotherUserFile.id())
+        );
+    }
+
 }

@@ -90,7 +90,8 @@ class FileServiceUnitTest {
                 uploadedFile.getUploadTime(),
                 uploadedFile.getContentType()
         );
-
+        when(userRepository.findById(user.getUserId()))
+                .thenReturn(Optional.of(user));
         when(uploadedFileReadMapper.map(any(UploadedFile.class))).thenReturn(expectedDto);
         when(uploadedFileRepository.save(any(UploadedFile.class)))
                 .thenAnswer(invocation -> {
@@ -103,6 +104,7 @@ class FileServiceUnitTest {
 
         assertEquals(fileId, result.id());
 
+        verify(userRepository).findById(user.getUserId());
         verify(uploadedFileRepository).save(any(UploadedFile.class));
         verify(uploadedFileReadMapper).map(any(UploadedFile.class));
         verify(fileEventPublisher).publishUpload(fileId);
@@ -393,12 +395,11 @@ class FileServiceUnitTest {
                 .filename(filename)
                 .build();
 
-        when(userRepository.findById(any(UUID.class))).thenReturn(Optional.of(user));
         when(uploadedFileRepository.findByFilenameAndUserId(any(String.class),any(UUID.class))).thenReturn(Optional.of(file));
         when(passwordEncoder.matches(rawPassword, user.getPassword())).thenReturn(true);
 
         try {
-             fileService.removeFileByFilename(userId, rawPassword, filename);
+            fileService.removeFileByFilename(userId, rawPassword, filename);
         } catch (AccessDeniedException e) {
             throw new RuntimeException(e);
         }
@@ -412,9 +413,7 @@ class FileServiceUnitTest {
         UUID userId = UUID.randomUUID();
         String rawPassword = "1234";
 
-        when(userRepository.findById(userId)).thenReturn(Optional.of(new User(userId, "", "", "", LocalDate.now())));
         when(uploadedFileRepository.findByFileIdAndUserId(fileId, userId)).thenReturn(Optional.empty());
-
 
         assertThrows(EntityNotFoundException.class, () -> fileService.removeFileById(userId, rawPassword,fileId));
         verify(passwordEncoder, never()).matches(any(), any());

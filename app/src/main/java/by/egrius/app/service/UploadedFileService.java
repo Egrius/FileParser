@@ -42,10 +42,11 @@ public class UploadedFileService {
     @Transactional
     public UploadedFileReadDto uploadFile(MultipartFile file, UUID userId) {
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("Пользователь не найден"));
+        String originalFilename = file.getOriginalFilename();
+        String filename = (originalFilename == null || originalFilename.isBlank())
+                ? "unnamed.txt"
+                : originalFilename;
 
-        String filename = Optional.ofNullable(file.getOriginalFilename()).orElse("unnamed.txt");
         try {
             byte[] fileBytes = file.getBytes();
             String rawText = new String(fileBytes, StandardCharsets.UTF_8);
@@ -63,7 +64,6 @@ public class UploadedFileService {
                     .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
             UploadedFile uploadedFile = UploadedFile.builder()
-                    .user(user)
                     .filename(filename)
                     .uploadTime(Timestamp.valueOf(LocalDateTime.now()))
                     .contentType(ContentType.TXT)
@@ -97,7 +97,6 @@ public class UploadedFileService {
         return uploadedFileReadMapper.map(uploadedFile);
     }
 
-    // новый метод
     public UploadedFileReadDto showUploadedFileByFilename(String filename, UUID userId) {
 
         UploadedFile uploadedFile = uploadedFileRepository.findByFilenameAndUserId(filename, userId)
@@ -111,7 +110,6 @@ public class UploadedFileService {
         return files.map(uploadedFileReadMapper::map);
     }
 
-    // Прописать тест
     public FileContentReadDto getFileContent(UUID userId, UUID fileId) {
         UploadedFile uploadedFile = uploadedFileRepository.findByIdWithUserAndContent(fileId, userId)
                 .orElseThrow(() -> new EntityNotFoundException("Файл не найден или не принадлежит пользователю"));
@@ -156,5 +154,4 @@ public class UploadedFileService {
         uploadedFileRepository.delete(uploadedFile);
         fileEventPublisher.publishDeleted(uploadedFile.getId());
     }
-
 }
