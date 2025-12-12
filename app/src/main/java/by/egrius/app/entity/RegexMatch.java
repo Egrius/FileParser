@@ -3,16 +3,14 @@ package by.egrius.app.entity;
 import by.egrius.app.entity.enums.PatternType;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.MapKeyType;
 
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 @Entity
-@Table(
-        name = "RegexMatch",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"fileId", "patternType"})
-)
+@Table(name = "RegexMatch")
 @NoArgsConstructor
 @Builder
 @Getter
@@ -20,23 +18,16 @@ import java.util.UUID;
 @AllArgsConstructor
 public class RegexMatch {
     @Id
-    @Column(name = "fileId")
+    @GeneratedValue
+    @Column(name = "regexId")
     private UUID id;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @MapsId
-    @JoinColumn(name = "fileId")
+    @JoinColumn(name = "fileId", unique = true, nullable = false)
     private UploadedFile uploadedFile;
 
-
-    @Enumerated(value = EnumType.STRING)
-    private PatternType patternType;
-
-    @ElementCollection(fetch = FetchType.LAZY)
-    @CollectionTable(name="regex_matches", joinColumns = @JoinColumn(name = "fileId"))
-    @MapKeyColumn(name = "patternType")
-    @Column(name="match")
-    private Map<PatternType, List<String>> matchesByType;
+    @OneToMany(mappedBy = "regexMatch", cascade = CascadeType.ALL, orphanRemoval = true)
+    List<PatternMatches> patternMatches;
 
     Long totalMatches;
 }

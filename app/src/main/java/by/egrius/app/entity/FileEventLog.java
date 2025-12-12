@@ -26,7 +26,7 @@
         private UUID id;
 
         @ManyToOne
-        @JoinColumn(name = "fileId")
+        @JoinColumn(name = "fileId", nullable = false)
         private UploadedFile uploadedFile;
 
         @Enumerated(value = EnumType.STRING)

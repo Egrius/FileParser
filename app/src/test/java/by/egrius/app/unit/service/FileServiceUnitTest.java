@@ -11,6 +11,7 @@ import by.egrius.app.publisher.FileEventPublisher;
 import by.egrius.app.repository.UploadedFileRepository;
 import by.egrius.app.repository.UserRepository;
 import by.egrius.app.service.UploadedFileService;
+import by.egrius.app.service.UserService;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,6 +32,7 @@ import java.nio.file.AccessDeniedException;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -40,6 +42,9 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(MockitoExtension.class)
 class FileServiceUnitTest {
+
+    @Mock
+    private UserService userService;
 
     @Mock
     private  UserRepository userRepository;
@@ -77,7 +82,7 @@ class FileServiceUnitTest {
         );
 
         UploadedFile uploadedFile = UploadedFile.builder()
-                .id(fileId) // задаём id
+                .id(fileId)
                 .user(user)
                 .filename("TestFileName")
                 .uploadTime(Timestamp.valueOf(LocalDateTime.now()))
@@ -120,6 +125,66 @@ class FileServiceUnitTest {
         );
 
         assertThrows(IllegalArgumentException.class, () -> fileService.uploadFile(mockFile, UUID.randomUUID()));
+    }
+
+    @Test
+    void uploadFile_shouldThrowIllegalArgumentException_whenFileSizeExceedsLimit() {
+        UUID userId = UUID.randomUUID();
+        User user = User.builder()
+                .userId(userId)
+                .username("TestName")
+                .password("hashed_pwd")
+                .createdAt(LocalDate.now())
+                .build();
+
+        // Создаем файл больше 10MB
+        byte[] largeContent = new byte[11 * 1024 * 1024]; // 11 MB
+        Arrays.fill(largeContent, (byte) 'A');
+
+        MultipartFile mockFile = new MockMultipartFile(
+                "file",
+                "TestFileName.txt",
+                "text/plain",
+                largeContent
+        );
+
+        assertThrows(IllegalArgumentException.class,
+                () -> fileService.uploadFile(mockFile, userId));
+
+        verify(uploadedFileRepository, never()).save(any());
+        verify(userRepository, never()).findById(any());
+    }
+
+    @Test
+    void uploadFile_shouldThrowIllegalArgumentException_whenFilenameAlreadyExists() {
+        UUID userId = UUID.randomUUID();
+        User user = User.builder()
+                .userId(userId)
+                .username("TestName")
+                .password("hashed_pwd")
+                .createdAt(LocalDate.now())
+                .build();
+
+        MultipartFile mockFile = new MockMultipartFile(
+                "file",
+                "existing_file.txt",
+                "text/plain",
+                "Hello world".getBytes(StandardCharsets.UTF_8)
+        );
+
+        UploadedFile existingFile = UploadedFile.builder()
+                .id(UUID.randomUUID())
+                .filename("existing_file.txt")
+                .user(user)
+                .build();
+
+        when(uploadedFileRepository.findByFilenameAndUserId("existing_file.txt", userId))
+                .thenReturn(Optional.of(existingFile));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> fileService.uploadFile(mockFile, userId));
+
+        verify(uploadedFileRepository, never()).save(any());
     }
 
     @Test
@@ -251,7 +316,6 @@ class FileServiceUnitTest {
         UUID anotherUserId = UUID.randomUUID();
         UUID fileId = UUID.randomUUID();
 
-        // файл принадлежит другому пользователю
         User anotherUser = User.builder().userId(anotherUserId).username("OtherUser").build();
         UploadedFile file = UploadedFile.builder()
                 .id(fileId)
@@ -259,7 +323,6 @@ class FileServiceUnitTest {
                 .user(anotherUser)
                 .build();
 
-        // репозиторий должен вернуть empty, потому что userId не совпадает
         when(uploadedFileRepository.findByIdWithUserAndContent(fileId, userId))
                 .thenReturn(Optional.empty());
 
@@ -280,7 +343,6 @@ class FileServiceUnitTest {
                 .user(user)
                 .build();
 
-        // fileContent не установлен → null
         when(uploadedFileRepository.findByIdWithUserAndContent(fileId, userId))
                 .thenReturn(Optional.of(file));
 
@@ -301,12 +363,12 @@ class FileServiceUnitTest {
     }
 
     @Test
-    void removeFileById_shouldDeleteFileIfExists() {
+    void removeFileById_shouldDeleteFileIfExists() throws AccessDeniedException {
         UUID fileId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
         String rawPassword = "1234";
 
-        User user = User.builder()
+        User currentUser = User.builder()
                 .userId(userId)
                 .password("hashed_password")
                 .username("TestUser")
@@ -315,18 +377,20 @@ class FileServiceUnitTest {
 
         UploadedFile file = UploadedFile.builder()
                 .id(fileId)
-                .user(user)
+                .user(currentUser)
                 .filename("file.txt")
                 .build();
 
+        when(userService.getCurrentUser()).thenReturn(currentUser);
         when(uploadedFileRepository.findByFileIdAndUserId(fileId, userId))
                 .thenReturn(Optional.of(file));
-        when(passwordEncoder.matches(rawPassword, user.getPassword())).thenReturn(true);
+        when(passwordEncoder.matches(rawPassword, currentUser.getPassword())).thenReturn(true);
 
         assertDoesNotThrow(() -> fileService.removeFileById(userId, rawPassword, fileId));
 
-        verify(uploadedFileRepository).delete(any(UploadedFile.class));
-        verify(fileEventPublisher).publishDeleted(any(UUID.class));
+        verify(userService).getCurrentUser();
+        verify(uploadedFileRepository).delete(file);
+        verify(fileEventPublisher).publishDeleted(fileId);
     }
 
     @Test
@@ -335,7 +399,7 @@ class FileServiceUnitTest {
         UUID userId = UUID.randomUUID();
         String rawPassword = "wrong_pwd";
 
-        User user = User.builder()
+        User currentUser = User.builder()
                 .userId(userId)
                 .password("hashed_password")
                 .username("TestUser")
@@ -343,13 +407,14 @@ class FileServiceUnitTest {
 
         UploadedFile file = UploadedFile.builder()
                 .id(fileId)
-                .user(user)
+                .user(currentUser)
                 .filename("file.txt")
                 .build();
 
+        when(userService.getCurrentUser()).thenReturn(currentUser);
         when(uploadedFileRepository.findByFileIdAndUserId(fileId, userId))
                 .thenReturn(Optional.of(file));
-        when(passwordEncoder.matches(rawPassword, user.getPassword())).thenReturn(false);
+        when(passwordEncoder.matches(rawPassword, currentUser.getPassword())).thenReturn(false);
 
         assertThrows(AccessDeniedException.class,
                 () -> fileService.removeFileById(userId, rawPassword, fileId));
@@ -364,6 +429,14 @@ class FileServiceUnitTest {
         UUID userId = UUID.randomUUID();
         String rawPassword = "1234";
 
+        User currentUser = User.builder()
+                .userId(userId)
+                .password("hashed")
+                .username("test")
+                .build();
+
+        when(userService.getCurrentUser()).thenReturn(currentUser);
+
         when(uploadedFileRepository.findByFileIdAndUserId(fileId, userId))
                 .thenReturn(Optional.empty());
 
@@ -375,15 +448,14 @@ class FileServiceUnitTest {
         verify(fileEventPublisher, never()).publishDeleted(any());
     }
 
-
     @Test
-    void removeFileByFilename_shouldDeleteFileIfExists() {
+    void removeFileByFilename_shouldDeleteFileIfExists() throws AccessDeniedException {
         UUID fileId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
         String rawPassword = "1234";
         String filename = "file.txt";
 
-        User user = User.builder()
+        User currentUser = User.builder()
                 .userId(userId)
                 .password("hashed_password")
                 .username("TestUser")
@@ -391,20 +463,20 @@ class FileServiceUnitTest {
 
         UploadedFile file = UploadedFile.builder()
                 .id(fileId)
-                .user(user)
+                .user(currentUser)
                 .filename(filename)
                 .build();
 
-        when(uploadedFileRepository.findByFilenameAndUserId(any(String.class),any(UUID.class))).thenReturn(Optional.of(file));
-        when(passwordEncoder.matches(rawPassword, user.getPassword())).thenReturn(true);
+        when(userService.getCurrentUser()).thenReturn(currentUser);
+        when(uploadedFileRepository.findByFilenameAndUserId(filename, userId))
+                .thenReturn(Optional.of(file));
+        when(passwordEncoder.matches(rawPassword, currentUser.getPassword())).thenReturn(true);
 
-        try {
-            fileService.removeFileByFilename(userId, rawPassword, filename);
-        } catch (AccessDeniedException e) {
-            throw new RuntimeException(e);
-        }
+        fileService.removeFileByFilename(userId, rawPassword, filename);
 
+        verify(userService).getCurrentUser();
         verify(uploadedFileRepository).delete(file);
+        verify(fileEventPublisher).publishDeleted(fileId);
     }
 
     @Test
@@ -413,11 +485,41 @@ class FileServiceUnitTest {
         UUID userId = UUID.randomUUID();
         String rawPassword = "1234";
 
+        User currentUser = User.builder()
+                .userId(userId)
+                .password("hashed")
+                .username("test")
+                .build();
+
+        when(userService.getCurrentUser()).thenReturn(currentUser);
+
         when(uploadedFileRepository.findByFileIdAndUserId(fileId, userId)).thenReturn(Optional.empty());
 
         assertThrows(EntityNotFoundException.class, () -> fileService.removeFileById(userId, rawPassword,fileId));
         verify(passwordEncoder, never()).matches(any(), any());
         verify(uploadedFileRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void removeFileById_shouldThrowAccessDeniedException_whenUserIdsDontMatch() {
+        UUID fileId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UUID currentUserId = UUID.randomUUID();
+        String rawPassword = "1234";
+
+        User currentUser = User.builder()
+                .userId(currentUserId)
+                .password("hashed_password")
+                .username("TestUser")
+                .build();
+
+        when(userService.getCurrentUser()).thenReturn(currentUser);
+
+        assertThrows(AccessDeniedException.class,
+                () -> fileService.removeFileById(userId, rawPassword, fileId));
+
+        verify(uploadedFileRepository, never()).findByFileIdAndUserId(any(), any());
+        verify(passwordEncoder, never()).matches(any(), any());
     }
 
     @Test
@@ -438,6 +540,9 @@ class FileServiceUnitTest {
                 .filename(filename)
                 .build();
 
+
+        when(userService.getCurrentUser()).thenReturn(user);
+
         when(uploadedFileRepository.findByFilenameAndUserId(filename, userId))
                 .thenReturn(Optional.of(file));
         when(passwordEncoder.matches(rawPassword, user.getPassword())).thenReturn(false);
@@ -455,6 +560,14 @@ class FileServiceUnitTest {
         String rawPassword = "1234";
         String filename = "file.txt";
 
+        User currentUser = User.builder()
+                .userId(userId)
+                .password("hashed")
+                .username("test")
+                .build();
+
+        when(userService.getCurrentUser()).thenReturn(currentUser);
+
         when(uploadedFileRepository.findByFilenameAndUserId(filename, userId))
                 .thenReturn(Optional.empty());
 
@@ -465,5 +578,4 @@ class FileServiceUnitTest {
         verify(uploadedFileRepository, never()).delete(any());
         verify(fileEventPublisher, never()).publishDeleted(any());
     }
-
 }

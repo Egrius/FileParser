@@ -1,10 +1,12 @@
 package by.egrius.app.service;
 
 import by.egrius.app.dto.fileDTO.RegexMatchReadDto;
+import by.egrius.app.entity.PatternMatches;
 import by.egrius.app.entity.RegexMatch;
 import by.egrius.app.entity.UploadedFile;
 import by.egrius.app.entity.enums.PatternType;
 import by.egrius.app.mapper.RegexMatchReadMapper;
+import by.egrius.app.repository.PatternMatchesRepository;
 import by.egrius.app.repository.RegexMatchRepository;
 import by.egrius.app.repository.UploadedFileRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -31,15 +33,28 @@ public class RegexMatchService {
     private final UploadedFileRepository uploadedFileRepository;
     private final RegexMatchRepository regexMatchRepository;
     private final RegexMatchReadMapper regexMatchReadMapper;
+    private final PatternMatchesRepository patternMatchesRepository;
 
     @Transactional
     public RegexMatchReadDto createRegexMatch(UUID fileId, Set<PatternType> types) {
         UploadedFile file = uploadedFileRepository.findById(fileId)
                 .orElseThrow(() -> new EntityNotFoundException("Файл не найден"));
 
-        String rawText = file.getFileContent().getRawText();
+        Optional<RegexMatch> existingMatch = regexMatchRepository.findByUploadedFileId(fileId);
+        if (existingMatch.isPresent()) {
+            regexMatchRepository.delete(existingMatch.get());
+            regexMatchRepository.flush();
+        }
 
-        Map<PatternType, List<String>> matchesByType = new EnumMap<>(PatternType.class);
+        String rawText = file.getFileContent().getRawText();
+        if (rawText == null || rawText.isBlank()) {
+            throw new IllegalArgumentException("Файл не содержит текста для анализа");
+        }
+
+        RegexMatch regexMatch = new RegexMatch();
+        regexMatch.setUploadedFile(file);
+
+        List<PatternMatches> allPatternMatches = new ArrayList<>();
         long totalMatches = 0;
 
         for (PatternType type : types) {
@@ -52,23 +67,42 @@ public class RegexMatchService {
                     .distinct()
                     .toList();
 
-            matchesByType.put(type, matches);
+            for (String matchValue : matches) {
+                PatternMatches patternMatch = PatternMatches.builder()
+                        .patternType(type)
+                        .match(matchValue)
+                        .regexMatch(regexMatch)
+                        .build();
+                allPatternMatches.add(patternMatch);
+            }
+
             totalMatches += matches.size();
         }
 
-        RegexMatch match = new RegexMatch();      // вручную, не через @Builder
-        match.setUploadedFile(file);              // критично: установить до persist
-        match.setMatchesByType(matchesByType);
-        match.setTotalMatches(totalMatches);
+        regexMatch.setPatternMatches(allPatternMatches);
+        regexMatch.setTotalMatches(totalMatches);
 
-        // отладка перед сохранением
-        System.out.println("file.id = " + file.getId());
-        System.out.println("match.id before save = " + match.getId()); // должен быть равен file.getId() или не null после setUploadedFile
-
-        regexMatchRepository.save(match);
+        regexMatchRepository.save(regexMatch);
         regexMatchRepository.flush();
 
+        return regexMatchReadMapper.map(regexMatch);
+    }
 
-        return regexMatchReadMapper.map(match);
+    @Transactional(readOnly = true)
+    public Optional<RegexMatchReadDto> getRegexMatchByFileId(UUID fileId) {
+        return regexMatchRepository.findByUploadedFileId(fileId)
+                .map(regexMatchReadMapper::map);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PatternMatches> getPatternMatchesByType(UUID fileId, PatternType type) {
+        return patternMatchesRepository.findByRegexMatchUploadedFileIdAndPatternType(fileId, type);
+    }
+
+    @Transactional
+    public void deleteRegexMatch(UUID fileId) {
+        regexMatchRepository.findByUploadedFileId(fileId)
+                .ifPresent(regexMatchRepository::delete);
+
     }
 }

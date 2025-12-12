@@ -17,11 +17,11 @@ import java.util.UUID;
 @ToString(exclude = "uploadedFile")
 public class FileContent {
     @Id
+    @GeneratedValue
     private UUID id;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @MapsId
-    @JoinColumn(name = "fileId")
+    @JoinColumn(name = "fileId", unique = true, nullable = false)
     private UploadedFile uploadedFile;
 
     @Column(columnDefinition = "TEXT")

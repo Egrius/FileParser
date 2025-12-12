@@ -2,10 +2,13 @@ package by.egrius.app.unit.service;
 
 import by.egrius.app.dto.fileDTO.RegexMatchReadDto;
 import by.egrius.app.entity.FileContent;
+import by.egrius.app.entity.PatternMatches;
+import by.egrius.app.entity.RegexMatch;
 import by.egrius.app.entity.UploadedFile;
 import by.egrius.app.entity.enums.ContentType;
 import by.egrius.app.entity.enums.PatternType;
 import by.egrius.app.mapper.RegexMatchReadMapper;
+import by.egrius.app.repository.PatternMatchesRepository;
 import by.egrius.app.repository.RegexMatchRepository;
 import by.egrius.app.repository.UploadedFileRepository;
 import by.egrius.app.service.RegexMatchService;
@@ -33,13 +36,13 @@ class RegexMatchServiceUnitTest {
     private UploadedFileRepository uploadedFileRepository;
 
     @Mock
-    private RegexMatchRepository regexMatchRepository;
-
-    @Mock
     private RegexMatchReadMapper regexMatchReadMapper;
 
     @Mock
-    private UploadedFileService uploadedFileService;
+    RegexMatchRepository regexMatchRepository;
+
+    @Mock
+    PatternMatchesRepository patternMatchesRepository;
 
     @InjectMocks
     private RegexMatchService regexMatchService;
@@ -85,23 +88,179 @@ class RegexMatchServiceUnitTest {
         );
 
         when(uploadedFileRepository.findById(mockFileId)).thenReturn(Optional.of(mockFile));
-        when(regexMatchReadMapper.map(any())).thenReturn(expectedDto);
+        when(regexMatchRepository.findByUploadedFileId(mockFileId)).thenReturn(Optional.empty());
+        when(regexMatchRepository.save(any(RegexMatch.class))).thenAnswer(invocation -> {
+            RegexMatch savedRegexMatch = invocation.getArgument(0);
+            savedRegexMatch.setId(UUID.randomUUID());
+            return savedRegexMatch;
+        });
+        when(regexMatchReadMapper.map(any(RegexMatch.class))).thenReturn(expectedDto);
+
 
         RegexMatchReadDto actual = regexMatchService.createRegexMatch(
                 mockFileId,
                 Set.of(PatternType.EMAIL, PatternType.PHONE, PatternType.IP, PatternType.DATE)
         );
 
+        assertNotNull(actual);
         assertEquals(expectedDto.matchCount(), actual.matchCount());
-        assertTrue(actual.emailMatches().containsAll(expectedEmails));
-        assertTrue(actual.phoneMatches().containsAll(expectedPhones));
-        assertTrue(actual.ipMatches().containsAll(expectedIps));
-        assertTrue(actual.dateMatches().containsAll(expectedDates));
+        assertEquals(expectedEmails, actual.emailMatches());
+        assertEquals(expectedPhones, actual.phoneMatches());
+        assertEquals(expectedIps, actual.ipMatches());
+        assertEquals(expectedDates, actual.dateMatches());
+
+        verify(uploadedFileRepository).findById(mockFileId);
+        verify(regexMatchRepository).findByUploadedFileId(mockFileId);
+        verify(regexMatchRepository).save(any(RegexMatch.class));
+        verify(regexMatchReadMapper).map(any(RegexMatch.class));
 
         System.out.println("Match count: " + actual.matchCount());
         System.out.println("Emails: " + actual.emailMatches());
         System.out.println("Phones:  " + actual.phoneMatches());
         System.out.println("Ips:  " + actual.ipMatches());
         System.out.println("Dates:  " + actual.dateMatches());
+    }
+
+    @Test
+    void createRegexMatch_shouldDeleteExistingMatch() {
+        // Arrange
+        UUID mockFileId = UUID.randomUUID();
+        UploadedFile mockFile = UploadedFile.builder()
+                .id(mockFileId)
+                .fileContent(FileContent.builder().rawText("test").build())
+                .build();
+
+        RegexMatch existingMatch = new RegexMatch();
+        existingMatch.setId(UUID.randomUUID());
+
+        when(uploadedFileRepository.findById(mockFileId)).thenReturn(Optional.of(mockFile));
+        when(regexMatchRepository.findByUploadedFileId(mockFileId)).thenReturn(Optional.of(existingMatch));
+        when(regexMatchRepository.save(any(RegexMatch.class))).thenReturn(new RegexMatch());
+        when(regexMatchReadMapper.map(any(RegexMatch.class))).thenReturn(new RegexMatchReadDto(
+                List.of(), List.of(), List.of(), List.of(), 0L
+        ));
+
+        regexMatchService.createRegexMatch(mockFileId, Set.of(PatternType.EMAIL));
+
+        verify(regexMatchRepository).delete(existingMatch);
+        verify(regexMatchRepository, times(2)).flush();
+    }
+
+    @Test
+    void createRegexMatch_shouldThrowWhenFileNotFound() {
+
+        UUID nonExistentFileId = UUID.randomUUID();
+        when(uploadedFileRepository.findById(nonExistentFileId)).thenReturn(Optional.empty());
+
+
+        assertThrows(jakarta.persistence.EntityNotFoundException.class, () -> {
+            regexMatchService.createRegexMatch(nonExistentFileId, Set.of(PatternType.EMAIL));
+        });
+    }
+
+    @Test
+    void createRegexMatch_shouldThrowWhenNoTextContent() {
+
+        UUID mockFileId = UUID.randomUUID();
+        UploadedFile mockFile = UploadedFile.builder()
+                .id(mockFileId)
+                .fileContent(FileContent.builder().rawText(null).build())
+                .build();
+
+        when(uploadedFileRepository.findById(mockFileId)).thenReturn(Optional.of(mockFile));
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            regexMatchService.createRegexMatch(mockFileId, Set.of(PatternType.EMAIL));
+        });
+    }
+
+    @Test
+    void getRegexMatchByFileId_shouldReturnDto() {
+
+        UUID fileId = UUID.randomUUID();
+        RegexMatch regexMatch = new RegexMatch();
+        regexMatch.setId(UUID.randomUUID());
+
+        RegexMatchReadDto expectedDto = new RegexMatchReadDto(
+                List.of("test@example.com"),
+                List.of(),
+                List.of(),
+                List.of(),
+                1L
+        );
+
+        when(regexMatchRepository.findByUploadedFileId(fileId)).thenReturn(Optional.of(regexMatch));
+        when(regexMatchReadMapper.map(regexMatch)).thenReturn(expectedDto);
+
+        Optional<RegexMatchReadDto> result = regexMatchService.getRegexMatchByFileId(fileId);
+
+        assertTrue(result.isPresent());
+        assertEquals(expectedDto, result.get());
+        verify(regexMatchRepository).findByUploadedFileId(fileId);
+    }
+
+    @Test
+    void getRegexMatchByFileId_shouldReturnEmptyWhenNotFound() {
+
+        UUID fileId = UUID.randomUUID();
+        when(regexMatchRepository.findByUploadedFileId(fileId)).thenReturn(Optional.empty());
+
+        Optional<RegexMatchReadDto> result = regexMatchService.getRegexMatchByFileId(fileId);
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void getPatternMatchesByType_shouldReturnMatches() {
+
+        UUID fileId = UUID.randomUUID();
+        PatternType type = PatternType.EMAIL;
+
+        PatternMatches match1 = PatternMatches.builder()
+                .matchId(UUID.randomUUID())
+                .patternType(PatternType.EMAIL)
+                .match("test1@example.com")
+                .build();
+
+        PatternMatches match2 = PatternMatches.builder()
+                .matchId(UUID.randomUUID())
+                .patternType(PatternType.EMAIL)
+                .match("test2@example.com")
+                .build();
+
+        List<PatternMatches> expectedMatches = List.of(match1, match2);
+
+        when(patternMatchesRepository.findByRegexMatchUploadedFileIdAndPatternType(fileId, type))
+                .thenReturn(expectedMatches);
+
+        List<PatternMatches> result = regexMatchService.getPatternMatchesByType(fileId, type);
+
+        assertEquals(2, result.size());
+        verify(patternMatchesRepository).findByRegexMatchUploadedFileIdAndPatternType(fileId, type);
+    }
+
+    @Test
+    void deleteRegexMatch_shouldDeleteWhenExists() {
+
+        UUID fileId = UUID.randomUUID();
+        RegexMatch regexMatch = new RegexMatch();
+        regexMatch.setId(UUID.randomUUID());
+
+        when(regexMatchRepository.findByUploadedFileId(fileId)).thenReturn(Optional.of(regexMatch));
+
+        regexMatchService.deleteRegexMatch(fileId);
+
+        verify(regexMatchRepository).delete(regexMatch);
+    }
+
+    @Test
+    void deleteRegexMatch_shouldDoNothingWhenNotFound() {
+
+        UUID fileId = UUID.randomUUID();
+        when(regexMatchRepository.findByUploadedFileId(fileId)).thenReturn(Optional.empty());
+
+        regexMatchService.deleteRegexMatch(fileId);
+
+        verify(regexMatchRepository, never()).delete(any());
     }
 }

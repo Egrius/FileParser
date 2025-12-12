@@ -12,6 +12,7 @@ import by.egrius.app.repository.UploadedFileRepository;
 import by.egrius.app.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -28,11 +29,13 @@ import java.util.Arrays;
 import java.util.Optional;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class UploadedFileService {
 
+    private final UserService userService;
     private final PasswordEncoder passwordEncoder;
     private final UploadedFileRepository uploadedFileRepository;
     private final UploadedFileReadMapper uploadedFileReadMapper;
@@ -42,10 +45,25 @@ public class UploadedFileService {
     @Transactional
     public UploadedFileReadDto uploadFile(MultipartFile file, UUID userId) {
 
+        long maxFileSize = 10 * 1024 * 1024; // 10 MB
+        if (file.getSize() > maxFileSize) {
+            throw new IllegalArgumentException("Размер файла превышает допустимый лимит (10 MB)");
+        }
+
         String originalFilename = file.getOriginalFilename();
         String filename = (originalFilename == null || originalFilename.isBlank())
                 ? "unnamed.txt"
                 : originalFilename;
+
+        Optional<UploadedFile> existingFile = uploadedFileRepository
+                .findByFilenameAndUserId(filename, userId);
+
+        if (existingFile.isPresent()) {
+            throw new IllegalArgumentException("Файл с таким именем уже существует");
+        }
+
+        log.info("Загрузка файла '{}' для пользователя {}",
+                file.getOriginalFilename(), userId);
 
         try {
             byte[] fileBytes = file.getBytes();
@@ -84,8 +102,13 @@ public class UploadedFileService {
 
             fileEventPublisher.publishUpload(uploadedFile.getId());
 
+            log.info("Файл '{}' успешно добавлен. Размер: {} байт, Строки: {}, Слова: {}",
+                    filename, fileBytes.length, lineCount, wordCount);
+
             return uploadedFileReadMapper.map(uploadedFile);
         } catch (IOException e) {
+            log.error("Ошибка при добавлении файла '{}' для пользователя {}",
+                    file.getOriginalFilename(), userId, e);
             throw new IllegalStateException("Ошибка при чтении содержимого файла", e);
         }
     }
@@ -130,28 +153,42 @@ public class UploadedFileService {
     @Transactional
     public void removeFileById(UUID userId, String rawPassword, UUID fileId) throws AccessDeniedException {
 
+        User currentUser = userService.getCurrentUser();
+
+        if (!currentUser.getUserId().equals(userId)) {
+            throw new AccessDeniedException("Нельзя удалять файлы других пользователей");
+        }
+
         UploadedFile uploadedFile = uploadedFileRepository.findByFileIdAndUserId(fileId, userId)
                 .orElseThrow(() -> new EntityNotFoundException("Не удалось найти файл для удаления"));
 
-        if (!passwordEncoder.matches(rawPassword, uploadedFile.getUser().getPassword())) {
+        if (!passwordEncoder.matches(rawPassword, currentUser.getPassword())) {
             throw new AccessDeniedException("Неверный пароль");
         }
 
         uploadedFileRepository.delete(uploadedFile);
+        log.info("Файл {} удалён пользователем {}", fileId, userId);
         fileEventPublisher.publishDeleted(fileId);
     }
 
     @Transactional
     public void removeFileByFilename(UUID userId, String rawPassword, String filename) throws AccessDeniedException {
 
+        User currentUser = userService.getCurrentUser();
+
+        if (!currentUser.getUserId().equals(userId)) {
+            throw new AccessDeniedException("Нельзя удалять файлы других пользователей");
+        }
+
         UploadedFile uploadedFile = uploadedFileRepository.findByFilenameAndUserId(filename, userId)
                 .orElseThrow(() -> new EntityNotFoundException("Файл с таким именем не найден"));
 
-        if (!passwordEncoder.matches(rawPassword, uploadedFile.getUser().getPassword())) {
+        if (!passwordEncoder.matches(rawPassword, currentUser.getPassword())) {
             throw new AccessDeniedException("Неверный пароль");
         }
 
         uploadedFileRepository.delete(uploadedFile);
+        log.info("Файл {} удалён пользователем {}", filename, userId);
         fileEventPublisher.publishDeleted(uploadedFile.getId());
     }
 }

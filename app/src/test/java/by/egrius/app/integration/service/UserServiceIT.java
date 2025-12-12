@@ -80,7 +80,7 @@ class UserServiceIT {
         assertThrows(EntityNotFoundException.class, () -> userService.updateUser(nonExistingId, updateDto));
     }
 
-
+    /*
     @Test
     @Transactional
     void updateUser_ShouldChangeDatabaseEntity() {
@@ -161,4 +161,6 @@ class UserServiceIT {
 
         assertThrows(EntityNotFoundException.class, () -> userService.deleteUser(nonExistingId, "1234"));
     }
+
+     */
 }

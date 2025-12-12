@@ -16,6 +16,7 @@ import java.util.UUID;
 @Builder
 @Getter
 @Setter
+@ToString(exclude = "uploadedFiles")
 @NoArgsConstructor
 @AllArgsConstructor
 public class User {
@@ -29,7 +30,7 @@ public class User {
     private String username;
 
     @Email
-    @Column(nullable = false, unique = true)
+    @Column(unique = true, nullable = false)
     private String email;
 
     @NotBlank
@@ -39,4 +40,7 @@ public class User {
 
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate createdAt;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<UploadedFile> uploadedFiles;
 }
