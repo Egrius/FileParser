@@ -12,6 +12,6 @@ import java.lang.annotation.Target;
 @Constraint(validatedBy = AtLeastOneFieldNotBlankValidator.class)
 public @interface AtLeastOneFieldNotBlank {
     String message() default "Хотя бы одно поле должно быть заполнено";
-    Class<?>[] groups() default {}; // ← обязательно
+    Class<?>[] groups() default {};
     Class<? extends jakarta.validation.Payload>[] payload() default {};
 }

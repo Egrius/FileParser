@@ -31,7 +31,7 @@ import java.util.*;
 @Service
 @Transactional(readOnly=true)
 @RequiredArgsConstructor
-public class UserService implements UserDetailsService {
+public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -42,7 +42,7 @@ public class UserService implements UserDetailsService {
 
     private final Validator validator;
 
-    @Override
+    //@Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         log.debug("Загрузка пользователя с username: {}", username);
         return userRepository.findByUsername(username)

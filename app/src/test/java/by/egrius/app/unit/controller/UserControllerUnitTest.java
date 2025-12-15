@@ -226,7 +226,7 @@ class UserControllerUnitTest {
         mockMvc.perform(delete("/user/delete-user/" + mockId)
                         .param("rawPassword", rawPassword))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.error").value("Пользователь не найден"));
+                .andExpect(jsonPath("$.message").value("Пользователь не найден"));
     }
     @Test
     void deleteUser_shouldReturn403_whenPasswordIncorrect() throws Exception {
@@ -239,6 +239,6 @@ class UserControllerUnitTest {
         mockMvc.perform(delete("/user/delete-user/" + mockId)
                         .param("rawPassword", rawPassword))
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.error").value("Неверный пароль"));
+                .andExpect(jsonPath("$.message").value("Неверный пароль"));
     }
 }

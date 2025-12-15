@@ -10,11 +10,6 @@ import java.util.UUID;
 
 public interface FileAnalysisRepository extends JpaRepository<FileAnalysis, UUID> {
 
-    @EntityGraph(attributePaths = {
-            "uploadedFile",
-            "uploadedFile.fileContent",
-            "uploadedFile.user"
-    })
     Optional<FileAnalysis> findByUploadedFile_Id(UUID fileId);
 
     boolean existsByUploadedFile_Id(UUID fileId);

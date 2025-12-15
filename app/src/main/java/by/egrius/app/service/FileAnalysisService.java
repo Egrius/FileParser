@@ -4,11 +4,14 @@ import by.egrius.app.dto.fileDTO.FileAnalysisReadDto;
 import by.egrius.app.entity.FileAnalysis;
 import by.egrius.app.entity.UploadedFile;
 import by.egrius.app.entity.enums.FileEventType;
+import by.egrius.app.mapper.fileMapper.FileAnalysisReadMapper;
 import by.egrius.app.publisher.FileEventPublisher;
 import by.egrius.app.repository.FileAnalysisRepository;
 import by.egrius.app.repository.UploadedFileRepository;
+import jakarta.annotation.PostConstruct;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +21,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+@Slf4j
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
@@ -26,15 +30,32 @@ public class FileAnalysisService {
     private final FileAnalysisRepository fileAnalysisRepository;
     private final UploadedFileRepository uploadedFileRepository;
     private final FileEventPublisher fileEventPublisher;
+    private final FileAnalysisReadMapper fileAnalysisReadMapper;
 
-    @Value("${text.analysis.stopwords}")
-    private String stopWordsRaw;
+    @Value("${text.analysis.stopwords:}")
+    private String defaultStopWordsRaw;
+
+    private String currentStopWordsRaw;
+
+    @PostConstruct
+    public void init() {
+        this.currentStopWordsRaw = defaultStopWordsRaw;
+    }
 
     @Transactional
     public FileAnalysisReadDto createAnalysis(UUID fileId, int topN, boolean stopWordsExcluded) {
 
-        UploadedFile uploadedFile = uploadedFileRepository.findById(fileId)
+        if (topN <= 0) {
+            throw new IllegalArgumentException("topN должен быть положительным числом");
+        }
+
+        UploadedFile uploadedFile = uploadedFileRepository.findWithFileAnalysisById(fileId)
                 .orElseThrow(() -> new EntityNotFoundException("Не найден файл для создания анализа"));
+
+        if (uploadedFile.getFileContent() == null ||
+                uploadedFile.getFileContent().getRawText() == null) {
+            throw new IllegalStateException("Файл не содержит текста для анализа");
+        }
 
         // Возможно сделать логику пересоздания анализа...
         if (uploadedFile.getFileAnalysis() != null) {
@@ -44,6 +65,11 @@ public class FileAnalysisService {
         fileEventPublisher.publish(FileEventType.PARSE_START, fileId);
 
         String rawText = uploadedFile.getFileContent().getRawText();
+
+        if (rawText.isBlank()) {
+            throw new IllegalStateException("Текст файла пустой");
+        }
+
         List<String> words = extractWords(rawText, stopWordsExcluded);
 
         Map<String, Long> topWords = countTopWords(words, topN);
@@ -51,9 +77,13 @@ public class FileAnalysisService {
         Map<Character, Long> punctuationMap = punctuationCount(rawText);
         Map<String, Integer> wordLengthMap = wordLengthCount(words);
 
-        FileAnalysis analysis = buildAnalysis(uploadedFile, topWords, startsWithMap, punctuationMap, wordLengthMap, stopWordsExcluded);
-        fileAnalysisRepository.save(analysis);
+        log.info("Создание анализа для файла {}: topN={}, stopWordsExcluded={}", fileId, topN, stopWordsExcluded);
 
+        FileAnalysis analysis = buildAnalysis(uploadedFile, topWords, startsWithMap, punctuationMap, wordLengthMap, stopWordsExcluded);
+
+        log.info("Анализ создан для файла {}. Найдено {} уникальных слов, топ слов: {}", fileId, words.size(), topWords.size());
+
+        fileAnalysisRepository.save(analysis);
         fileEventPublisher.publish(FileEventType.PARSE_END, fileId);
 
         return new FileAnalysisReadDto(
@@ -66,8 +96,13 @@ public class FileAnalysisService {
         );
     }
 
+    public Optional<FileAnalysisReadDto> getAnalysisByFileId(UUID fileId) {
+        return fileAnalysisRepository.findByUploadedFile_Id(fileId)
+                .map(fileAnalysisReadMapper::map);
+    }
+
     public void setStopWordsRaw(String stopWordsRaw) {
-        this.stopWordsRaw = stopWordsRaw;
+        this.currentStopWordsRaw = stopWordsRaw;
     }
 
     private FileAnalysis buildAnalysis(UploadedFile file,
@@ -75,8 +110,10 @@ public class FileAnalysisService {
                                        Map<Character, Long> startsWithMap,
                                        Map<Character, Long> punctuationMap,
                                        Map<String, Integer> wordLengthMap,
+
                                        boolean stopWordsExcluded) {
-        return FileAnalysis.builder()
+
+        FileAnalysis analysis = FileAnalysis.builder()
                 .uploadedFile(file)
                 .topWords(topWords)
                 .startsWithMap(startsWithMap)
@@ -84,6 +121,11 @@ public class FileAnalysisService {
                 .wordLengthMap(wordLengthMap)
                 .stopWordsExcluded(stopWordsExcluded)
                 .build();
+
+        // Устанавливаем обратную связь
+        file.setFileAnalysis(analysis);
+
+        return analysis;
     }
 
     private Map<String, Integer> wordLengthCount(List<String> words) {
@@ -142,19 +184,16 @@ public class FileAnalysisService {
 
         return stream.toList();
     }
-    // Утилитные методы
-
-    private Map<String, Long> topWordsCount(List<String> words) {
-        return words.stream().collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
-    }
-
 
     private String normalizeWord(String word) {
         return  word.replaceAll("[\\p{Punct}&&[^-]]", "").toLowerCase().trim();
     }
 
     private Set<String> getStopWords() {
-        return Arrays.stream(stopWordsRaw.split(","))
+        if (currentStopWordsRaw == null || currentStopWordsRaw.isBlank()) {
+            return Set.of();
+        }
+        return Arrays.stream(currentStopWordsRaw.split(","))
                 .map(String::trim)
                 .map(String::toLowerCase)
                 .collect(Collectors.toSet());

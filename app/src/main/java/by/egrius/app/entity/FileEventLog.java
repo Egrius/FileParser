@@ -2,10 +2,7 @@
 
     import by.egrius.app.entity.enums.FileEventType;
     import jakarta.persistence.*;
-    import lombok.AllArgsConstructor;
-    import lombok.Builder;
-    import lombok.NoArgsConstructor;
-    import lombok.ToString;
+    import lombok.*;
 
     import org.hibernate.annotations.GenericGenerator;
 
@@ -16,6 +13,7 @@
     @Table(name="FileEventLog")
     @Builder
     @ToString(exclude = "uploadedFile")
+    @Setter
     @NoArgsConstructor
     @AllArgsConstructor
     public class FileEventLog {
@@ -25,9 +23,8 @@
         @Column(name = "id", updatable = false, nullable = false)
         private UUID id;
 
-        @ManyToOne
-        @JoinColumn(name = "fileId", nullable = false)
-        private UploadedFile uploadedFile;
+        @Column(name = "file_id")
+        private UUID fileId;
 
         @Enumerated(value = EnumType.STRING)
         private FileEventType fileEventType;

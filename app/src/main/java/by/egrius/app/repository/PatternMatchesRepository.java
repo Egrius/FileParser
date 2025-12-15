@@ -11,9 +11,7 @@ import java.util.UUID;
 
 public interface PatternMatchesRepository extends JpaRepository<PatternMatches, UUID> {
 
-    @Query("SELECT pm FROM PatternMatches pm " +
-            "WHERE pm.fileId = :fileId " +
-            "AND pm.patternType = :patternType")
+    @Query("SELECT pm FROM PatternMatches pm WHERE pm.regexMatch.uploadedFile.id = :fileId AND pm.patternType = :patternType")
     List<PatternMatches> findByRegexMatchUploadedFileIdAndPatternType(@Param("fileId") UUID fileId,
                                                                       @Param("patternType") PatternType type);
 }

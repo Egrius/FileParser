@@ -1,6 +1,5 @@
 package by.egrius.app.controller;
 
-import by.egrius.app.dto.fileDTO.UploadedFileReadDto;
 import by.egrius.app.dto.userDTO.UserCreateDto;
 import by.egrius.app.dto.userDTO.UserReadDto;
 import by.egrius.app.dto.userDTO.UserUpdateDto;
@@ -10,7 +9,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -38,7 +36,7 @@ public class UserController {
     public ResponseEntity<UserReadDto> createUser(@Valid @RequestBody UserCreateDto userCreateDto) {
 
         UserReadDto createdUserReadDto = userService.createUser(userCreateDto);
-        return ResponseEntity.ofNullable(createdUserReadDto);
+        return ResponseEntity.ok(createdUserReadDto);
     }
 
     @PutMapping("/update-user/{id}")
@@ -51,11 +49,11 @@ public class UserController {
     }
 
     @DeleteMapping("/delete-user/{id}")
-    public Map<String, Boolean> deleteUser(@PathVariable UUID id,
+    public ResponseEntity<Map<String, Boolean>> deleteUser(@PathVariable UUID id,
                                            @RequestParam String rawPassword) {
 
         userService.deleteUser(id, rawPassword);
-        return Map.of("deleted", true);
+        return ResponseEntity.ok(Map.of("deleted", true));
     }
 
 

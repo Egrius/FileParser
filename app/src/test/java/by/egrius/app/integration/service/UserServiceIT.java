@@ -7,22 +7,29 @@ import by.egrius.app.entity.User;
 import by.egrius.app.repository.UserRepository;
 import by.egrius.app.service.UserService;
 import jakarta.persistence.EntityNotFoundException;
-import jakarta.validation.ConstraintViolationException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.time.LocalDate;
-import java.util.Collections;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest
+@DataJpaTest
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@ActiveProfiles("service-test")
+@Import({
+        ServiceTestConfig.class,
+        UserService.class
+})
 class UserServiceIT {
+
     @Autowired
     private UserService userService;
 
@@ -33,7 +40,6 @@ class UserServiceIT {
     private PasswordEncoder passwordEncoder;
 
     @Test
-    @Transactional
     void getUserByUsername_ShouldReturnCorrectUser() {
         String nameToFindUser = "TestToFind";
 
@@ -45,18 +51,14 @@ class UserServiceIT {
                 .build();
 
         userRepository.save(userToFind);
-        userRepository.flush();
 
         Optional<UserReadDto> found = userService.getUserByUsername(nameToFindUser);
 
         assertTrue(found.isPresent());
-
         assertEquals(found.get().username(), nameToFindUser);
     }
 
-
     @Test
-    @Transactional
     void createUser_shouldPersistUserAndReturnDto() {
 
         UserCreateDto dto = new UserCreateDto("Aleksey", "alex@example.com", "1234");
@@ -72,22 +74,31 @@ class UserServiceIT {
     }
 
     @Test
-    @Transactional
     void updateUser_withNonExistingId_shouldThrowEntityNotFoundException() {
+
         UUID nonExistingId = UUID.randomUUID();
         UserUpdateDto updateDto = new UserUpdateDto("NewName", "new@example.com", "newpass");
 
-        assertThrows(EntityNotFoundException.class, () -> userService.updateUser(nonExistingId, updateDto));
+        assertThrows(EntityNotFoundException.class,
+                () -> userService.updateUser(nonExistingId, updateDto));
     }
 
-    /*
     @Test
-    @Transactional
     void updateUser_ShouldChangeDatabaseEntity() {
+        // Arrange
         String nameToFindUser = "testuser";
-        userRepository.save(new User(null ,nameToFindUser, "testEmail@gmail.com","123", LocalDate.now()));
-        Optional<User> userToUpdate = userRepository.findByUsername(nameToFindUser);
 
+        // Используем Builder вместо конструктора
+        User user = User.builder()
+                .username(nameToFindUser)
+                .email("testEmail@gmail.com")
+                .password("123")
+                .createdAt(LocalDate.now())
+                .build();
+
+        User savedUser = userRepository.save(user);
+
+        Optional<User> userToUpdate = userRepository.findByUsername(nameToFindUser);
         assertTrue(userToUpdate.isPresent());
 
         String oldUsername = userToUpdate.get().getUsername();
@@ -101,39 +112,58 @@ class UserServiceIT {
 
         UserUpdateDto updateDto = new UserUpdateDto(updatedUsername, updatedEmail, updatedPassword);
 
+        // Act
         userService.updateUser(idOfUserToUpdate, updateDto);
 
+        // Assert
         Optional<User> userAfterUpdate = userRepository.findById(idOfUserToUpdate);
-
         assertTrue(userAfterUpdate.isPresent());
 
-        assertNotEquals(oldUsername, userAfterUpdate.get().getUsername());
-        assertNotEquals(oldEmail, userAfterUpdate.get().getEmail());
-        assertNotEquals(oldPassword, userAfterUpdate.get().getPassword());
+        User updatedUser = userAfterUpdate.get();
+        assertNotEquals(oldUsername, updatedUser.getUsername());
+        assertNotEquals(oldEmail, updatedUser.getEmail());
+        // Пароль должен быть зашифрованным в сервисе
+        assertNotEquals(oldPassword, updatedUser.getPassword());
     }
 
     @Test
-    @Transactional
     void updateUser_withoutPassword_shouldKeepOldPassword() {
-        User user = userRepository.save(new User(null, "NoPassUser", "nopass@example.com", passwordEncoder.encode("oldpass"), LocalDate.now()));
-        UUID id = user.getUserId();
+
+        String oldPassword = "oldpass";
+
+        User user = User.builder()
+                .username("NoPassUser")
+                .email("nopass@example.com")
+                .password(passwordEncoder.encode(oldPassword))
+                .createdAt(LocalDate.now())
+                .build();
+
+        User savedUser = userRepository.save(user);
+        UUID id = savedUser.getUserId();
 
         UserUpdateDto updateDto = new UserUpdateDto("UpdatedName", "updated@example.com", null);
+
         userService.updateUser(id, updateDto);
 
         User updated = userRepository.findById(id).orElseThrow();
-        assertTrue(passwordEncoder.matches("oldpass", updated.getPassword()));
+        assertTrue(passwordEncoder.matches(oldPassword, updated.getPassword()));
     }
 
     @Test
-    @Transactional
     void delete_ShouldDeleteUserFromDatabase() {
-        String nameToDelete = "TestUserToDelete";
-        String emailToDelete = "emailToDelte@gmail.com";
-        String rawPasswordToDelete = "1234";
-        String encodedPassword = passwordEncoder.encode(rawPasswordToDelete);
 
-        userRepository.save(new User(null, nameToDelete, emailToDelete, encodedPassword, LocalDate.now()));
+        String nameToDelete = "TestUserToDelete";
+        String emailToDelete = "emailToDelete@gmail.com";
+        String rawPasswordToDelete = "1234";
+
+        User user = User.builder()
+                .username(nameToDelete)
+                .email(emailToDelete)
+                .password(passwordEncoder.encode(rawPasswordToDelete))
+                .createdAt(LocalDate.now())
+                .build();
+
+        User savedUser = userRepository.save(user);
 
         User userToDelete = userRepository.findByUsername(nameToDelete).orElseThrow(
                 () -> new EntityNotFoundException("Не удалось найти пользователя перед его удалением"));
@@ -147,20 +177,30 @@ class UserServiceIT {
     }
 
     @Test
-    @Transactional
     void deleteUser_withWrongPassword_shouldThrowSecurityException() {
-        User user = userRepository.save(new User(null, "UserToDelete", "delete@example.com", passwordEncoder.encode("correct"), LocalDate.now()));
 
-        assertThrows(SecurityException.class, () -> userService.deleteUser(user.getUserId(), "wrong"));
+        String correctPassword = "correct";
+
+        User user = User.builder()
+                .username("UserToDelete")
+                .email("delete@example.com")
+                .password(passwordEncoder.encode(correctPassword))
+                .createdAt(LocalDate.now())
+                .build();
+
+        User savedUser = userRepository.save(user);
+        UUID userId = savedUser.getUserId();
+
+        assertThrows(SecurityException.class,
+                () -> userService.deleteUser(userId, "wrong"));
     }
 
     @Test
-    @Transactional
     void deleteUser_withNonExistingId_shouldThrowEntityNotFoundException() {
+
         UUID nonExistingId = UUID.randomUUID();
 
-        assertThrows(EntityNotFoundException.class, () -> userService.deleteUser(nonExistingId, "1234"));
+        assertThrows(EntityNotFoundException.class,
+                () -> userService.deleteUser(nonExistingId, "1234"));
     }
-
-     */
 }

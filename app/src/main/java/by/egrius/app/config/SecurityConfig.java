@@ -2,6 +2,7 @@ package by.egrius.app.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -19,11 +20,18 @@ import java.net.http.HttpRequest;
 public class SecurityConfig {
 
     @Bean
-    @Profile("dev")
+
+    //@Profile("dev")
     public UserDetailsService userDetailsService(PasswordEncoder encoder) {
+        String encodedPassword = encoder.encode("secret");
+        System.out.println("=== CREATING TEST USER ===");
+        System.out.println("Username: egor");
+        System.out.println("Password (raw): secret");
+        System.out.println("Password (encoded): " + encodedPassword);
+
         UserDetails egor = User.builder()
                 .username("egor")
-                .password(encoder.encode("secret")) // теперь это BCrypt
+                .password(encodedPassword)
                 .roles("USER")
                 .build();
         return new InMemoryUserDetailsManager(egor);
@@ -45,6 +53,4 @@ public class SecurityConfig {
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
-
-
 }

@@ -32,4 +32,8 @@ public interface UploadedFileRepository extends JpaRepository<UploadedFile, UUID
     Optional<UploadedFile> findByIdWithUserAndContent(@Param("fileId") UUID fileId,
                                                       @Param("userId") UUID userId);
 
+    // @EntityGraph(attributePaths = {"fileAnalysis"})
+    @Query("SELECT f FROM UploadedFile f LEFT JOIN FETCH f.fileAnalysis WHERE f.id = :id")
+    Optional<UploadedFile> findWithFileAnalysisById(@Param("id") UUID id);
+
 }

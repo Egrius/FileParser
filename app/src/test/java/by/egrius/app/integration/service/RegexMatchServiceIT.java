@@ -10,6 +10,7 @@ import by.egrius.app.mapper.RegexMatchReadMapper;
 import by.egrius.app.repository.RegexMatchRepository;
 import by.egrius.app.repository.UploadedFileRepository;
 import by.egrius.app.repository.UserRepository;
+import by.egrius.app.service.FileAnalysisService;
 import by.egrius.app.service.RegexMatchService;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,8 +21,12 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Timestamp;
@@ -34,8 +39,13 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@DataJpaTest
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@ActiveProfiles("service-test")
+@Import({
+        ServiceTestConfig.class,
+        RegexMatchService.class
+})
 class RegexMatchServiceIT {
 
     @Autowired
@@ -100,10 +110,9 @@ class RegexMatchServiceIT {
         uploadedFile.setFileContent(fileContent);
 
         userRepository.save(user);
-        userRepository.flush();
+        uploadedFileRepository.save(uploadedFile);
 
         uploadedFileId = uploadedFile.getId();
-
     }
 
     @Test
