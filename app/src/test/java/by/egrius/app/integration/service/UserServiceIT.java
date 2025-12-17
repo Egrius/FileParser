@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@ActiveProfiles("service-test")
+@ActiveProfiles("test")
 @Import({
         ServiceTestConfig.class,
         UserService.class

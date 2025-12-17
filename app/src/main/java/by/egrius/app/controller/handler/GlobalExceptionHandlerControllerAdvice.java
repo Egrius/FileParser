@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
-
+import org.springframework.security.access.AccessDeniedException;
 import java.time.LocalDate;
 
 @ControllerAdvice
@@ -21,6 +21,7 @@ public class GlobalExceptionHandlerControllerAdvice {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ResponseBody
     ValidationErrorDto onConstraintValidationException(ConstraintViolationException e) {
+        System.out.println("Вызван обработчик onConstraintValidationException\n");
         ValidationErrorDto error = new ValidationErrorDto();
         for(ConstraintViolation v : e.getConstraintViolations()) {
             error.getViolations().add(
@@ -34,6 +35,7 @@ public class GlobalExceptionHandlerControllerAdvice {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ResponseBody
     public ValidationErrorDto handleMethodArgumentNotValid(MethodArgumentNotValidException e) {
+        System.out.println("Вызван обработчик handleMethodArgumentNotValid\n");
         ValidationErrorDto error = new ValidationErrorDto();
         e.getBindingResult().getFieldErrors().forEach(
                 fieldError -> error.getViolations().add(
@@ -41,8 +43,20 @@ public class GlobalExceptionHandlerControllerAdvice {
                         )
                 )
         );
-
         return error;
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ResponseBody
+    public ExceptionDto handleIllegalArgumentException(IllegalArgumentException e, HttpServletRequest request) {
+        return new ExceptionDto(
+                e.getMessage(),
+                "BAD_REQUEST",
+                request.getRequestURI(),
+                LocalDate.now(),
+                HttpStatus.BAD_REQUEST.value()
+        );
     }
 
 
@@ -56,6 +70,19 @@ public class GlobalExceptionHandlerControllerAdvice {
                 request.getRequestURI(),
                 LocalDate.now(),
                 HttpStatus.INTERNAL_SERVER_ERROR.value()
+        );
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    @ResponseBody
+    ExceptionDto onAccessDeniedException(AccessDeniedException e, HttpServletRequest request) {
+        return new ExceptionDto(
+                e.getMessage(),
+                "ACCESS_DENIED_ERROR",
+                request.getRequestURI(),
+                LocalDate.now(),
+                HttpStatus.FORBIDDEN.value()
         );
     }
 }

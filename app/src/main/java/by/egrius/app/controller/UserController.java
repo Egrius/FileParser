@@ -42,19 +42,14 @@ public class UserController {
     @PutMapping("/update-user/{id}")
     public ResponseEntity<UserReadDto> updateUser(@PathVariable UUID id,
                                                   @Valid @RequestBody UserUpdateDto userUpdateDto) {
-
         UserReadDto updatedUserReadDto = userService.updateUser(id, userUpdateDto);
         return ResponseEntity.ofNullable(updatedUserReadDto);
-
     }
 
     @DeleteMapping("/delete-user/{id}")
     public ResponseEntity<Map<String, Boolean>> deleteUser(@PathVariable UUID id,
-                                           @RequestParam String rawPassword) {
-
+                                                           @RequestParam String rawPassword) {
         userService.deleteUser(id, rawPassword);
         return ResponseEntity.ok(Map.of("deleted", true));
     }
-
-
 }

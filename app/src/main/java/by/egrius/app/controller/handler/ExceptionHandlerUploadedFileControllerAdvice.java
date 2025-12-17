@@ -57,16 +57,5 @@ public class ExceptionHandlerUploadedFileControllerAdvice {
         );
     }
 
-    @ExceptionHandler(AccessDeniedException.class)
-    @ResponseStatus(HttpStatus.FORBIDDEN)
-    @ResponseBody
-    ExceptionDto onAccessDeniedException(AccessDeniedException e, HttpServletRequest request) {
-        return new ExceptionDto(
-                e.getMessage(),
-                "ACCESS_DENIED_ERROR",
-                request.getRequestURI(),
-                LocalDate.now(),
-                HttpStatus.FORBIDDEN.value()
-        );
-    }
+
 }

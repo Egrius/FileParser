@@ -16,6 +16,7 @@ import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -31,7 +32,7 @@ import java.util.*;
 @Service
 @Transactional(readOnly=true)
 @RequiredArgsConstructor
-public class UserService {
+public class UserService implements UserDetailsService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -42,7 +43,15 @@ public class UserService {
 
     private final Validator validator;
 
-    //@Override
+    private UserPrincipal getCurrentUserPrincipal() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof UserPrincipal principal) {
+            return principal;
+        }
+        throw new SecurityException("Пользователь не аутентифицирован");
+    }
+
+    @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         log.debug("Загрузка пользователя с username: {}", username);
         return userRepository.findByUsername(username)
@@ -51,11 +60,15 @@ public class UserService {
     }
 
     public User getCurrentUser() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.getPrincipal() instanceof UserPrincipal principal) {
-            return principal.getUser();
-        }
-        throw new SecurityException("Не удалось получить текущего пользователя");
+        return getCurrentUserPrincipal().getUser();
+    }
+
+    public boolean canModifyUser(UUID targetUserId) {
+        UserPrincipal principal = getCurrentUserPrincipal();
+        User currentUser = principal.getUser();
+
+        return currentUser.getUserId().equals(targetUserId);
+
     }
 
     public Optional<UserReadDto> getUserByUsername(String username) {
@@ -68,15 +81,16 @@ public class UserService {
 
     @Transactional
     public UserReadDto createUser(UserCreateDto userCreateDto) {
-        User user = userCreateMapper.map(userCreateDto);
-        user.setPassword(passwordEncoder.encode(userCreateDto.getRawPassword()));
 
-        if (userRepository.existsByUsername(user.getUsername())) {
+        if (userRepository.existsByUsername(userCreateDto.getUsername())) {
             throw new IllegalArgumentException("Пользователь с таким именем уже существует");
         }
-        if (userRepository.existsByEmail(user.getEmail())) {
+        if (userRepository.existsByEmail(userCreateDto.getEmail())) {
             throw new IllegalArgumentException("Пользователь с таким email уже существует");
         }
+
+        User user = userCreateMapper.map(userCreateDto);
+        user.setPassword(passwordEncoder.encode(userCreateDto.getRawPassword()));
 
         Set<ConstraintViolation<User>> violations = validator.validate(user);
         if(!violations.isEmpty()) {
@@ -90,8 +104,15 @@ public class UserService {
 
     @Transactional
     public UserReadDto updateUser(UUID id, UserUpdateDto userUpdateDto) {
+        User currentUser = getCurrentUser();
+
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Пользователь для обновления не найден"));
+
+        if (!canModifyUser(id)) {
+            throw new AccessDeniedException("Нет прав для обновления пользователя");
+        }
+
 
         if (userUpdateDto.getUsername() != null &&
                 !userUpdateDto.getUsername().equals(user.getUsername()) &&

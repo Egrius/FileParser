@@ -1,6 +1,5 @@
 package by.egrius.app.service;
 
-import by.egrius.app.dto.fileDTO.FileReadDto;
 import by.egrius.app.entity.FileEventLog;
 import by.egrius.app.entity.UploadedFile;
 import by.egrius.app.entity.enums.FileEventType;
