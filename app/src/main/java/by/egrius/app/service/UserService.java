@@ -65,9 +65,8 @@ public class UserService implements UserDetailsService {
 
     public boolean canModifyUser(UUID targetUserId) {
         UserPrincipal principal = getCurrentUserPrincipal();
-        User currentUser = principal.getUser();
 
-        return currentUser.getUserId().equals(targetUserId);
+        return principal.getId().equals(targetUserId);
 
     }
 
@@ -98,21 +97,20 @@ public class UserService implements UserDetailsService {
         }
 
         userRepository.save(user);
-        log.info("Создан пользователь: {}", user.getUsername());
+        log.info("Пользователь создан: username={}, email={}, id={}",
+                user.getUsername(), user.getEmail(), user.getUserId());
         return userReadMapper.map(user);
     }
 
     @Transactional
     public UserReadDto updateUser(UUID id, UserUpdateDto userUpdateDto) {
-        User currentUser = getCurrentUser();
-
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Пользователь для обновления не найден"));
 
         if (!canModifyUser(id)) {
             throw new AccessDeniedException("Нет прав для обновления пользователя");
         }
 
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Пользователь для обновления не найден"));
 
         if (userUpdateDto.getUsername() != null &&
                 !userUpdateDto.getUsername().equals(user.getUsername()) &&
@@ -142,6 +140,11 @@ public class UserService implements UserDetailsService {
 
     @Transactional
     public void deleteUser(UUID id, String rawPassword) {
+
+        if (!canModifyUser(id)) {
+            throw new AccessDeniedException("Нет прав для обновления пользователя");
+        }
+
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Пользователь не найден"));
 

@@ -23,26 +23,6 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableWebSecurity
 @Profile("test")
 public class TestSecurityConfig {
-/*
-    @Bean
-    @Primary
-    public UserDetailsService userDetailsService() {
-
-        UserDetails user = User.builder()
-                .username("TestUser")
-                .password("{noop}1234")
-                .roles("USER")
-                .build();
-
-        UserDetails admin = User.builder()
-                .username("TestAdmin")
-                .password("{noop}1234")
-                .roles("ADMIN")
-                .build();
-
-        return new InMemoryUserDetailsManager(user, admin);
-    }
- */
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
@@ -54,17 +34,7 @@ public class TestSecurityConfig {
                 .httpBasic(Customizer.withDefaults())
                 .build();
     }
-/*
-    @Bean
-    public AuthenticationProvider authenticationProvider(
-            UserDetailsService userDetailsService,
-            PasswordEncoder passwordEncoder) {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setUserDetailsService(userDetailsService);
-        provider.setPasswordEncoder(passwordEncoder);
-        return provider;
-    }
-*/
+
     @Bean
     @Primary
     public PasswordEncoder passwordEncoder() {

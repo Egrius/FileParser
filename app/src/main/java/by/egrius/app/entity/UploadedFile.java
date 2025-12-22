@@ -5,6 +5,7 @@
     import lombok.*;
 
     import java.sql.Timestamp;
+    import java.util.Objects;
     import java.util.UUID;
 
     @Entity
@@ -47,4 +48,17 @@
 
         @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
         private FileEventLog fileEventLog;
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(id);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof UploadedFile)) return false;
+            UploadedFile that = (UploadedFile) o;
+            return Objects.equals(id, that.id);
+        }
     }

@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -33,5 +34,18 @@ public interface UploadedFileRepository extends JpaRepository<UploadedFile, UUID
     // @EntityGraph(attributePaths = {"fileAnalysis"})
     @Query("SELECT f FROM UploadedFile f LEFT JOIN FETCH f.fileAnalysis WHERE f.id = :id")
     Optional<UploadedFile> findWithFileAnalysisById(@Param("id") UUID id);
+
+    long countByUser_UserId(UUID userId);
+
+    @Query("SELECT f FROM UploadedFile f WHERE f.user.userId = :userId ORDER BY f.uploadTime DESC")
+    List<UploadedFile> findTopByUser_UserIdOrderByUploadTimeDesc(@Param("userId") UUID userId, Pageable pageable);
+
+    @Query("SELECT f FROM UploadedFile f WHERE f.user.userId = :userId AND f.filename LIKE %:keyword%")
+    Page<UploadedFile> findByUser_IdAndFilenameContaining(@Param("userId") UUID userId,
+                                                          @Param("keyword") String keyword,
+                                                          Pageable pageable);
+
+    @Query("SELECT f FROM UploadedFile f WHERE f.user.userId = :userId AND f.contentType = :contentType")
+    Page<UploadedFile> findByUserIdAndContentType(UUID userId, String contentType, Pageable pageable);
 
 }

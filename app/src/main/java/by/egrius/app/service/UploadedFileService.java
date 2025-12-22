@@ -14,6 +14,7 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -26,6 +27,7 @@ import java.nio.file.AccessDeniedException;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -100,7 +102,7 @@ public class UploadedFileService {
 
             uploadedFileRepository.save(uploadedFile);
 
-            fileEventPublisher.publishUpload(uploadedFile.getId());
+            // fileEventPublisher.publishUpload(uploadedFile.getId());
 
             log.info("Файл '{}' успешно добавлен. Размер: {} байт, Строки: {}, Слова: {}",
                     filename, fileBytes.length, lineCount, wordCount);
@@ -163,7 +165,7 @@ public class UploadedFileService {
                 .orElseThrow(() -> new EntityNotFoundException("Не удалось найти файл для удаления"));
 
         if (!passwordEncoder.matches(rawPassword, currentUser.getPassword())) {
-            throw new AccessDeniedException("Неверный пароль");
+            throw new org.springframework.security.access.AccessDeniedException("Неверный пароль");
         }
 
         uploadedFileRepository.delete(uploadedFile);
@@ -190,5 +192,27 @@ public class UploadedFileService {
         uploadedFileRepository.delete(uploadedFile);
         log.info("Файл {} удалён пользователем {}", filename, userId);
         fileEventPublisher.publishDeleted(uploadedFile.getId());
+    }
+
+    public long countFilesByUserId(UUID userId) {
+        return uploadedFileRepository.countByUser_UserId(userId);
+    }
+
+    public List<UploadedFileReadDto> getRecentFiles(UUID userId, int limit) {
+        return uploadedFileRepository.findTopByUser_UserIdOrderByUploadTimeDesc(userId, PageRequest.of(0, limit))
+                .stream()
+                .map(uploadedFileReadMapper::map)
+                .toList();
+    }
+
+    // Поиск
+    public Page<UploadedFileReadDto> searchFiles(UUID userId, String keyword, Pageable pageable) {
+        return uploadedFileRepository.findByUser_IdAndFilenameContaining(userId, keyword, pageable)
+                .map(uploadedFileReadMapper::map);
+    }
+
+    public Page<UploadedFileReadDto> filterByContentType(UUID userId, String contentType, Pageable pageable) {
+        return uploadedFileRepository.findByUserIdAndContentType(userId, contentType, pageable)
+                .map(uploadedFileReadMapper::map);
     }
 }

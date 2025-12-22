@@ -18,7 +18,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.Base64;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -36,10 +36,6 @@ class UserControllerIT {
 
     @Autowired
     private UserRepository userRepository;
-
-    private static final String TEST_USERNAME = "TestUser";
-    private static final String TEST_PASSWORD = "1234";
-    private static final String TEST_EMAIL = "test@test.com";
 
     @BeforeEach
     void clearDatabase() {
@@ -287,28 +283,6 @@ class UserControllerIT {
         }
 
         @Test
-        void updateUser_shouldReturn404WhenUserNotFound() throws Exception {
-            String invalidJson = """
-            {
-                "username": "UpdatedName",
-                "email": "exampleUpdated@gmail.com"
-            }
-        """;
-
-            String randomUUID =  UUID.randomUUID().toString();
-
-            mockMvc.perform(put("/user/update-user/" + randomUUID)
-                            .with(httpBasic("TestUser", "1234"))
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(invalidJson))
-                    .andExpect(status().isNotFound())
-                    .andExpect(jsonPath("$.message").value("Пользователь для обновления не найден"))
-                    .andExpect(jsonPath("$.code").value("ENTITY_NOT_FOUND_ERROR"))
-                    .andExpect(jsonPath("$.path").value("/user/update-user/" + randomUUID))
-                    .andExpect(jsonPath("$.status").value(HttpStatus.NOT_FOUND.value()));
-        }
-
-        @Test
         void updateUser_shouldReturn400WhenUsernameAlreadyTaken() throws Exception {
             String json = """
             {
@@ -340,6 +314,63 @@ class UserControllerIT {
                             .content(json))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.message").value("Данный email уже используется"));
+        }
+    }
+
+    @Nested
+    class DeleteUserTests {
+        private UUID testUserUUID;
+        private UUID existingUUID;
+
+        @BeforeEach
+        void setUpTwoUsers() {
+
+            UserCreateDto existing = new UserCreateDto(
+                    "ExistingUser", "existing@test.com", "pass123"
+            );
+            userService.createUser(existing);
+            existingUUID = userRepository.findByUsername("ExistingUser").get().getUserId();
+
+            UserCreateDto testUser = new UserCreateDto(
+                    "TestUser", "test@test.com", "1234"
+            );
+            userService.createUser(testUser);
+            testUserUUID = userRepository.findByUsername("TestUser").get().getUserId();
+        }
+
+        @Test
+        void deleteUserShouldReturn200_whenSelfDelete() throws Exception{
+            mockMvc.perform(delete("/user/delete-user/" + testUserUUID)
+                            .param("rawPassword", "1234")
+                            .with(httpBasic("TestUser", "1234")))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.deleted").value(true));
+
+            assertFalse(userRepository.findById(testUserUUID).isPresent());
+        }
+
+        @Test
+        void deleteUserShouldReturn403_whenNotSelfDelete() throws Exception {
+            mockMvc.perform(delete("/user/delete-user/" + existingUUID)
+                    .param("rawPassword", "1234")
+                    .with(httpBasic("TestUser", "1234")))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        void deleteUserWithWrongPassword_shouldReturn403() throws Exception {
+            mockMvc.perform(delete("/user/delete-user/" + testUserUUID)
+                            .param("rawPassword", "invalidPassword")
+                            .with(httpBasic("TestUser", "1234")))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        void deleteUserWithWrongAuthentication_shouldReturn401() throws Exception {
+            mockMvc.perform(delete("/user/delete-user/" + testUserUUID)
+                            .param("rawPassword", "invalidPassword")
+                            .with(httpBasic("TestUser", "invalidPassword")))
+                    .andExpect(status().isUnauthorized());
         }
     }
 }

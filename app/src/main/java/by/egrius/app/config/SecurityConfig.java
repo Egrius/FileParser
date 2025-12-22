@@ -21,24 +21,6 @@ import java.net.http.HttpRequest;
 public class SecurityConfig {
 
     @Bean
-
-    //@Profile("dev")
-    public UserDetailsService userDetailsService(PasswordEncoder encoder) {
-        String encodedPassword = encoder.encode("secret");
-        System.out.println("=== CREATING TEST USER ===");
-        System.out.println("Username: egor");
-        System.out.println("Password (raw): secret");
-        System.out.println("Password (encoded): " + encodedPassword);
-
-        UserDetails egor = User.builder()
-                .username("egor")
-                .password(encodedPassword)
-                .roles("USER")
-                .build();
-        return new InMemoryUserDetailsManager(egor);
-    }
-
-    @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
                 .csrf(csrf -> csrf.disable())

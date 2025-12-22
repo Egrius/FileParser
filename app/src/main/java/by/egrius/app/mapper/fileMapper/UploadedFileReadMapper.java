@@ -11,7 +11,6 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class UploadedFileReadMapper implements BaseMapper<UploadedFile, UploadedFileReadDto> {
-    private final UserReadMapper userReadMapper;
 
     @Override
     public UploadedFileReadDto map(UploadedFile object) {

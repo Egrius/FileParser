@@ -13,7 +13,6 @@ import java.util.UUID;
 public class UserPrincipal implements UserDetails {
     private final User user;
 
-
     public UUID getId() {
         return user.getUserId();
     }

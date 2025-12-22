@@ -8,12 +8,16 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+
 import java.time.LocalDate;
+import java.util.UUID;
 
 @ControllerAdvice
 public class GlobalExceptionHandlerControllerAdvice {
@@ -83,6 +87,39 @@ public class GlobalExceptionHandlerControllerAdvice {
                 request.getRequestURI(),
                 LocalDate.now(),
                 HttpStatus.FORBIDDEN.value()
+        );
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ExceptionDto handleMethodArgumentTypeMismatch(MethodArgumentTypeMismatchException ex,
+                                                         HttpServletRequest request) {
+
+        String message;
+        if (ex.getRequiredType() != null && ex.getRequiredType().equals(UUID.class)) {
+            message = String.format("Параметр '%s' должен быть валидным UUID", ex.getName());
+        } else {
+            message = String.format("Некорректный формат параметра '%s'", ex.getName());
+        }
+
+        return new ExceptionDto(
+                message,
+                "BAD_REQUEST",
+                request.getRequestURI(),
+                LocalDate.now(),
+                HttpStatus.BAD_REQUEST.value());
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ExceptionDto handleMissingServletRequestParameter(MissingServletRequestParameterException ex,
+                                                             HttpServletRequest request) {
+        return new ExceptionDto(
+                String.format("Отсутствует обязательный параметр: '%s'", ex.getParameterName()),
+                        "BAD_REQUEST",
+                        request.getRequestURI(),
+                        LocalDate.now(),
+                        HttpStatus.BAD_REQUEST.value()
         );
     }
 }

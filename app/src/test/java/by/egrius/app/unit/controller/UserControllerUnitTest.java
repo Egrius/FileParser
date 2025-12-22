@@ -45,7 +45,7 @@ class UserControllerUnitTest {
                         .content(invalidJson))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.violations").isArray())
-                .andExpect(jsonPath("$.violations.length()").value(3)
+                .andExpect(jsonPath("$.violations.length()").value(4)
                 );
     }
 

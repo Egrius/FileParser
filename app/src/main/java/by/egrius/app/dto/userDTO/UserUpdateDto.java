@@ -1,6 +1,7 @@
 package by.egrius.app.dto.userDTO;
 
 import by.egrius.app.annotation.AtLeastOneFieldNotBlank;
+import by.egrius.app.annotation.ValidPasswordOrEmpty;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
@@ -15,6 +16,7 @@ public class UserUpdateDto {
     @Email(message = "Email должен быть корректным")
     String email;
 
-    @Size(min = 4, max = 100,  message = "Пароль должен быть минимум 4 символа")
+
+    @ValidPasswordOrEmpty
     String rawPassword;
 }

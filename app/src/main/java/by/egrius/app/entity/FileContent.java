@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigInteger;
+import java.util.Objects;
 import java.util.UUID;
 
 @Entity
@@ -33,4 +34,17 @@ public class FileContent {
 
     @Enumerated(value = EnumType.STRING)
     private Language language;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof FileContent)) return false;
+        FileContent that = (FileContent) o;
+        return id != null && id.equals(that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
 }
