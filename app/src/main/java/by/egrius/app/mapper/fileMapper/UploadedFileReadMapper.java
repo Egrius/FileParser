@@ -1,10 +1,8 @@
 package by.egrius.app.mapper.fileMapper;
 
-import by.egrius.app.dto.fileDTO.FileReadDto;
 import by.egrius.app.dto.fileDTO.UploadedFileReadDto;
 import by.egrius.app.entity.UploadedFile;
 import by.egrius.app.mapper.BaseMapper;
-import by.egrius.app.mapper.userMapper.UserReadMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

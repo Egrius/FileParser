@@ -4,7 +4,6 @@ import by.egrius.app.entity.enums.Language;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.math.BigInteger;
 import java.util.Objects;
 import java.util.UUID;
 

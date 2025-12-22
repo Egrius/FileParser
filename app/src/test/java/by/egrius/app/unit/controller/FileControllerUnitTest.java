@@ -41,7 +41,7 @@ class FileControllerUnitTest {
     private FileController fileController;
 
     @Test
-    void uploadFile_shouldUploadFileIfUserIsCorrect() throws Exception {
+    void uploadFile_shouldUploadFileIfUserIsCorrect(){
 
         MockMultipartFile mockMultipartFile = new MockMultipartFile(
                 "file",

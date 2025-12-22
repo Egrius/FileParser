@@ -3,7 +3,6 @@ package by.egrius.app.dto.userDTO;
 import by.egrius.app.annotation.AtLeastOneFieldNotBlank;
 import by.egrius.app.annotation.ValidPasswordOrEmpty;
 import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
 import lombok.Value;
 

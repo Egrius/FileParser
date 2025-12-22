@@ -1,6 +1,5 @@
 package by.egrius.app.service;
 
-import by.egrius.app.dto.fileDTO.UploadedFileReadDto;
 import by.egrius.app.dto.userDTO.UserCreateDto;
 import by.egrius.app.dto.userDTO.UserReadDto;
 import by.egrius.app.dto.userDTO.UserUpdateDto;
