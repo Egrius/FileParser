@@ -85,7 +85,7 @@ by.egrius.app/ <br>
 
 - Java 21+
 - PostgreSQL
-- Maven
+- Gradle
 
 ###  Установка и запуск
 ``` bash
